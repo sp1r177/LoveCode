@@ -33,16 +33,27 @@ jobs:
         working-directory: ./backend
         run: composer install --no-dev --optimize-autoloader --no-interaction
       
-      - name: Deploy to server
+      - name: Deploy frontend
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 22
-          source: "frontend/dist/*,backend/*"
-          target: ${{ secrets.SERVER_PATH }}
-          strip_components: 0
+          source: "frontend/dist/*"
+          target: ${{ secrets.SERVER_PATH }}/frontend/
+          strip_components: 2
+      
+      - name: Deploy backend
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          source: "backend/*"
+          target: ${{ secrets.SERVER_PATH }}/backend/
+          strip_components: 1
       
       - name: Run deployment script
         uses: appleboy/ssh-action@master
@@ -52,11 +63,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd ${{ secrets.SERVER_PATH }}
-            # Настроить права и перезапустить сервисы
+            
+            # Установить backend зависимости
+            cd backend
+            composer install --no-dev --optimize-autoloader --no-interaction || true
+            
+            # Настроить права
+            cd ..
+            chown -R www-data:www-data ${{ secrets.SERVER_PATH }}
+            chmod -R 755 ${{ secrets.SERVER_PATH }}
             chmod -R 755 backend
             chmod -R 755 frontend/dist
-            # Перезапустить PHP-FPM (если используется)
+            
+            # Перезапустить сервисы
             sudo systemctl reload php8.2-fpm || true
-            # Перезагрузить Nginx
             sudo systemctl reload nginx || true
 

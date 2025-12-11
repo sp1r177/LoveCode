@@ -17,10 +17,10 @@ class CloudRuService
         $cloudRu = $config['cloudru'];
         $this->apiKey = $cloudRu['api_key'];
         $this->folderId = $cloudRu['folder_id'];
-        $this->model = $cloudRu['model'];
+        $modelName = $cloudRu['model'];
         
-        // Формируем полный путь к модели
-        $fullModelPath = "gpt://{$this->folderId}/{$this->model}/latest";
+        // Формируем полный путь к модели для Cloud.ru
+        $fullModelPath = "gpt://{$this->folderId}/{$modelName}/latest";
         
         $this->httpClient = new Client([
             'base_uri' => 'https://llm.api.cloud.yandex.net/v1/',

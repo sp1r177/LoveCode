@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Services\OpenAIService;
+use App\Services\CloudRuService;
 use App\Models\Analysis;
 use App\Models\Subscription;
 use App\Models\UsageLimit;
@@ -43,10 +43,10 @@ class AnalysisController
         }
 
         try {
-            // Анализ через OpenAI
-            $openai = new OpenAIService();
+            // Анализ через Cloud.ru
+            $cloudRu = new CloudRuService();
             $enhanced = $planConfig['enhanced_analysis'] ?? false;
-            $result = $openai->analyzeDialog($dialogText, $enhanced);
+            $result = $cloudRu->analyzeDialog($dialogText, $enhanced);
 
             // Ограничить количество вариантов ответов для Free
             if ($planConfig['reply_options_count'] < 4) {

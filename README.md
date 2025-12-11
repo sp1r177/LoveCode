@@ -25,7 +25,7 @@
 - **Slim Framework 4** — минималистичный роутер
 - **MySQL** — реляционная БД
 - **JWT** — токены авторизации
-- **OpenAI API** — анализ через GPT-4o-mini
+- **Cloud.ru AI API** — анализ через Qwen3-235B-A22B-Instruct-2507
 
 ### База данных
 - `users` — пользователи (VK ID, имя, аватар)
@@ -38,8 +38,8 @@
 
 ### Расчёт себестоимости
 
-**Средняя цена анализа через OpenAI:**
-- GPT-4o-mini: ~0.1–0.4 ₽ за анализ (зависит от длины текста)
+**Средняя цена анализа через Cloud.ru:**
+- Qwen3-235B-A22B-Instruct-2507: зависит от тарифа Cloud.ru (обычно ~0.2–0.5 ₽ за анализ)
 
 ### Тарифы и маржинальность
 
@@ -116,7 +116,7 @@ cp .env.example .env
 server {
     listen 80;
     server_name your-domain.com;
-    root /var/www/ai-assistant/frontend/dist;
+    root /var/www/flirt-ai/frontend/dist;
     index index.html;
 
     # Frontend
@@ -153,13 +153,15 @@ npm run dev
 
 ### Переменные окружения (Backend)
 
+**Важно**: Перед настройкой `.env` файла, настройте Cloud.ru AI API (см. [CLOUDRU_SETUP.md](./CLOUDRU_SETUP.md))
+
 Создайте файл `backend/.env`:
 
 ```env
 # Database
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=ai_assistant
+DB_NAME=flirt_ai
 DB_USER=root
 DB_PASSWORD=your_password
 
@@ -171,9 +173,10 @@ VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
 # JWT
 JWT_SECRET=your-secret-key-min-32-chars
 
-# OpenAI
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+# Cloud.ru AI
+CLOUDRU_API_KEY=your_cloudru_api_key
+CLOUDRU_FOLDER_ID=your_folder_id
+CLOUDRU_MODEL=qwen3-235b-a22b-instruct-2507
 
 # YooMoney
 YOOMONEY_RECEIVER=410011234567890

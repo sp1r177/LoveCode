@@ -19,9 +19,10 @@ return [
         'algorithm' => 'HS256',
         'expiration' => 86400 * 30, // 30 days
     ],
-    'openai' => [
-        'api_key' => $_ENV['OPENAI_API_KEY'] ?? '',
-        'model' => $_ENV['OPENAI_MODEL'] ?? 'gpt-4o-mini',
+    'cloudru' => [
+        'api_key' => $_ENV['CLOUDRU_API_KEY'] ?? '',
+        'folder_id' => $_ENV['CLOUDRU_FOLDER_ID'] ?? '',
+        'model' => $_ENV['CLOUDRU_MODEL'] ?? 'qwen3-235b-a22b-instruct-2507',
     ],
     'yoomoney' => [
         'receiver' => $_ENV['YOOMONEY_RECEIVER'] ?? '',
