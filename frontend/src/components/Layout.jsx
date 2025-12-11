@@ -11,7 +11,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
@@ -58,9 +58,32 @@ export default function Layout() {
           </div>
         </div>
       </nav>
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-600">
+              © {new Date().getFullYear()} LoveCode / flirt-ai.ru
+            </div>
+            <div className="flex gap-6">
+              <Link
+                to="/privacy"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Политика конфиденциальности
+              </Link>
+              <Link
+                to="/terms"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Пользовательское соглашение
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

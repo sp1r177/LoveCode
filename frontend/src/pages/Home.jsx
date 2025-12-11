@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
 
@@ -41,6 +41,19 @@ export default function Home() {
         >
           {token ? 'Начать анализ' : 'Войти через VK'}
         </button>
+        {!token && (
+          <p className="mt-4 text-sm text-gray-600">
+            Авторизуясь через VK ID, вы принимаете условия{' '}
+            <Link to="/privacy" className="text-primary-600 hover:text-primary-700 underline">
+              Политики конфиденциальности
+            </Link>
+            {' '}и{' '}
+            <Link to="/terms" className="text-primary-600 hover:text-primary-700 underline">
+              Пользовательского соглашения
+            </Link>
+            .
+          </p>
+        )}
       </div>
 
       <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">

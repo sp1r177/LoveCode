@@ -6,6 +6,8 @@ import Pricing from './pages/Pricing'
 import Profile from './pages/Profile'
 import AuthCallback from './pages/AuthCallback'
 import PaymentSuccess from './pages/PaymentSuccess'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 import PrivateRoute from './components/PrivateRoute'
 import Layout from './components/Layout'
 
@@ -18,6 +20,8 @@ function App() {
             <Route index element={<Home />} />
             <Route path="auth/callback" element={<AuthCallback />} />
             <Route path="payment/success" element={<PaymentSuccess />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="terms" element={<Terms />} />
             <Route
               path="analyze"
               element={
