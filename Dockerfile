@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     curl \
+    git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
@@ -48,8 +49,10 @@ WORKDIR /var/www/html
 # Копируем backend зависимости
 COPY backend/composer.json* ./
 
-# Устанавливаем PHP зависимости
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Устанавливаем PHP зависимости с настройками для надежности
+RUN composer config --global prefer-dist true && \
+    composer config --global github-protocols https && \
+    composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 # Копируем backend код
 COPY backend/ ./
