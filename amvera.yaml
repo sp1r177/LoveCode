@@ -6,3 +6,4 @@ meta:
   environment: docker
   # Dockerfile должен находиться в корне проекта
 
+
