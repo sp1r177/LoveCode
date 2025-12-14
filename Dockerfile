@@ -17,6 +17,7 @@ RUN if [ -f package-lock.json ]; then \
 COPY frontend/ ./
 
 # Собираем frontend
+# API URL теперь определяется автоматически из window.location
 RUN npm run build
 
 # Финальный образ с PHP и Nginx

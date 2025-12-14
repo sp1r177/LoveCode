@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
+import { getApiUrl } from '../utils/api'
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams()
   const { refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [status, setStatus] = useState('loading')
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const API_URL = getApiUrl()
 
   useEffect(() => {
     const paymentId = searchParams.get('payment_id')

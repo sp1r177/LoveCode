@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
+import { getApiUrl } from '../utils/api'
 
 const TONE_COLORS = {
   neutral: 'bg-gray-200 text-gray-800',
@@ -24,7 +25,7 @@ export default function Analyze() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const { user } = useAuth()
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const API_URL = getApiUrl()
 
   const handleAnalyze = async () => {
     if (!text.trim()) {

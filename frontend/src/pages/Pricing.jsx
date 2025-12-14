@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
+import { getApiUrl } from '../utils/api'
 
 export default function Pricing() {
   const { token, user } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(null)
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const API_URL = getApiUrl()
 
   const handleSubscribe = async (plan) => {
     if (!token) {

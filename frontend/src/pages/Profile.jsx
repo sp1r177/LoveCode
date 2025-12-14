@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { getApiUrl } from '../utils/api'
 
 export default function Profile() {
   const { user, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const API_URL = getApiUrl()
 
   useEffect(() => {
     fetchHistory()
