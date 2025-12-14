@@ -10,8 +10,8 @@ return [
         'charset' => 'utf8mb4',
     ],
     'vk' => [
-        'app_id' => $_ENV['VK_APP_ID'] ?? '',
-        'app_secret' => $_ENV['VK_APP_SECRET'] ?? '',
+        'app_id' => $_ENV['VK_APP_ID'] ?? $_ENV['VK_CLIENT_ID'] ?? '',
+        'app_secret' => $_ENV['VK_APP_SECRET'] ?? $_ENV['VK_CLIENT_SECRET'] ?? '',
         'redirect_uri' => $_ENV['VK_REDIRECT_URI'] ?? 'http://localhost/api/auth/vk-callback',
     ],
     'jwt' => [
