@@ -12,11 +12,27 @@ class AuthController
 {
     public function init(Request $request, Response $response): Response
     {
-        $vkAuth = new VkAuthService();
-        $authUrl = $vkAuth->getAuthUrl();
-        
-        $response->getBody()->write(json_encode(['auth_url' => $authUrl]));
-        return $response->withHeader('Content-Type', 'application/json');
+        try {
+            $vkAuth = new VkAuthService();
+            $authUrl = $vkAuth->getAuthUrl();
+            
+            if (empty($authUrl) || !filter_var($authUrl, FILTER_VALIDATE_URL)) {
+                error_log('VK Auth URL is invalid or empty. Check VK_APP_ID/VK_CLIENT_ID and VK_REDIRECT_URI');
+                $response->getBody()->write(json_encode(['error' => 'VK authentication not configured']));
+                return $response
+                    ->withStatus(500)
+                    ->withHeader('Content-Type', 'application/json');
+            }
+            
+            $response->getBody()->write(json_encode(['auth_url' => $authUrl]));
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            error_log('VK Auth init error: ' . $e->getMessage());
+            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
+            return $response
+                ->withStatus(500)
+                ->withHeader('Content-Type', 'application/json');
+        }
     }
 
     public function callback(Request $request, Response $response): Response

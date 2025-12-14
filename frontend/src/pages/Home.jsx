@@ -10,10 +10,16 @@ export default function Home() {
   const handleVkLogin = async () => {
     try {
       const response = await axios.post(`${API_URL}/api/auth/vk-init`)
-      window.location.href = response.data.auth_url
+      if (response.data.auth_url) {
+        window.location.href = response.data.auth_url
+      } else {
+        console.error('No auth_url in response:', response.data)
+        alert('Ошибка: сервер не вернул URL для авторизации. Проверьте конфигурацию.')
+      }
     } catch (error) {
       console.error('Failed to init VK auth:', error)
-      alert('Ошибка авторизации. Попробуйте позже.')
+      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка'
+      alert(`Ошибка авторизации: ${errorMessage}. Проверьте конфигурацию VK приложения.`)
     }
   }
 

@@ -15,6 +15,17 @@ class VkAuthService
         $this->httpClient = new Client();
         $config = require __DIR__ . '/../../config/config.php';
         $this->config = $config['vk'];
+        
+        // Валидация конфигурации
+        if (empty($this->config['app_id'])) {
+            throw new \RuntimeException('VK App ID is not configured. Set VK_APP_ID or VK_CLIENT_ID environment variable.');
+        }
+        if (empty($this->config['app_secret'])) {
+            throw new \RuntimeException('VK App Secret is not configured. Set VK_APP_SECRET or VK_CLIENT_SECRET environment variable.');
+        }
+        if (empty($this->config['redirect_uri'])) {
+            throw new \RuntimeException('VK Redirect URI is not configured. Set VK_REDIRECT_URI environment variable.');
+        }
     }
 
     public function getAuthUrl(): string
