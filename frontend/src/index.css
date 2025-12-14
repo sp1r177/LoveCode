@@ -16,3 +16,47 @@ body {
   box-sizing: border-box;
 }
 
+/* Стили для кнопки VK ID - синяя стилистика ВК */
+.vkid-button-container {
+  background: linear-gradient(135deg, #0077FF 0%, #0051D5 100%);
+  border-radius: 8px;
+  padding: 2px;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(0, 119, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.vkid-button-container:hover {
+  box-shadow: 0 4px 12px rgba(0, 119, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.vkid-button-container:active {
+  transform: translateY(0);
+}
+
+/* Стили для элементов VK ID SDK */
+.vkid-button-container [data-vkid] {
+  border-radius: 6px !important;
+}
+
+/* Переопределение стилей кнопки VK ID на синий */
+.vkid-button-container button,
+.vkid-button-container a,
+.vkid-button-container [role="button"] {
+  background: #0077FF !important;
+  background-color: #0077FF !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: white !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.vkid-button-container button:hover,
+.vkid-button-container a:hover,
+.vkid-button-container [role="button"]:hover {
+  background: #0051D5 !important;
+  background-color: #0051D5 !important;
+}
+

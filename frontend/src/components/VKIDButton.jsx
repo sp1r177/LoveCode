@@ -55,6 +55,7 @@ export default function VKIDButton({ className = '' }) {
         .render({
           container: containerRef.current,
           oauthList: ['vkid'],
+          scheme: VKID.Scheme.PRIMARY, // Синяя тема
         })
         .on(VKID.WidgetEvents.ERROR, (error) => {
           console.error('VK ID widget error:', error)
@@ -112,6 +113,35 @@ export default function VKIDButton({ className = '' }) {
     }
   }, [initialized, API_URL, login, navigate])
 
+  // Добавляем стили для кнопки VK ID после рендера
+  useEffect(() => {
+    if (containerRef.current && initialized) {
+      // Применяем стили к кнопке VK ID после рендера
+      const styleButton = () => {
+        const buttons = containerRef.current?.querySelectorAll('button, a, [role="button"]')
+        if (buttons && buttons.length > 0) {
+          buttons.forEach((btn) => {
+            btn.style.backgroundColor = '#0077FF'
+            btn.style.background = '#0077FF'
+            btn.style.borderColor = '#0077FF'
+            btn.style.color = '#FFFFFF'
+            btn.style.borderRadius = '6px'
+          })
+        }
+      }
+
+      // Применяем стили сразу и после небольшой задержки
+      styleButton()
+      const timeout = setTimeout(styleButton, 100)
+      const interval = setInterval(styleButton, 500)
+
+      return () => {
+        clearTimeout(timeout)
+        clearInterval(interval)
+      }
+    }
+  }, [initialized])
+
   useEffect(() => {
     let checkInterval = null
 
@@ -167,11 +197,13 @@ export default function VKIDButton({ className = '' }) {
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
-      <div
-        ref={containerRef}
-        className="flex justify-center w-full"
-        style={{ minHeight: '48px' }}
-      />
+      <div className="vkid-button-container">
+        <div
+          ref={containerRef}
+          className="flex justify-center"
+          style={{ minHeight: '48px', minWidth: '200px' }}
+        />
+      </div>
       {loading && (
         <p className="mt-3 text-sm text-gray-500">Авторизация...</p>
       )}
