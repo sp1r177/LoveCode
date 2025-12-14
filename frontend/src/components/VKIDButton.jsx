@@ -13,6 +13,45 @@ export default function VKIDButton({ className = '' }) {
   const navigate = useNavigate()
   const API_URL = getApiUrl()
 
+  const vkidOnSuccess = useCallback(async (data) => {
+    console.log('VK ID success data:', data)
+    
+    if (!data || !data.access_token) {
+      setError('Не получен токен от VK ID')
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Отправляем токен на бэкенд для создания/получения пользователя и JWT
+      console.log('Sending token to backend...')
+      const response = await axios.post(`${API_URL}/api/auth/vkid`, {
+        access_token: data.access_token,
+      })
+
+      if (response.data.token) {
+        login(response.data.token)
+        navigate('/analyze')
+      } else {
+        throw new Error('Не получен токен от сервера')
+      }
+    } catch (err) {
+      console.error('VK ID authentication error:', err)
+      const errorMessage = err.response?.data?.error || err.message || 'Ошибка авторизации'
+      setError(errorMessage)
+      setLoading(false)
+    }
+  }, [API_URL, login, navigate])
+
+  const vkidOnError = useCallback((error) => {
+    console.error('VK ID error:', error)
+    setError('Ошибка авторизации VK ID. Попробуйте ещё раз.')
+    setLoading(false)
+  }, [])
+
   const initializeVKID = useCallback(() => {
     if (!window.VKIDSDK || !containerRef.current || initialized) {
       return
@@ -21,126 +60,54 @@ export default function VKIDButton({ className = '' }) {
     const VKID = window.VKIDSDK
 
     try {
-      // Получаем app_id из переменных окружения
+      // Используем точные значения из примера
       const appId = import.meta.env.VITE_VK_APP_ID || '54395556'
-      
-      // Для VK ID SDK redirectUrl должен быть URL на вашем домене
-      // Должен совпадать с настройками в VK приложении
-      // Используем текущий домен или значение из переменных окружения
-      const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin
-      
-      // Для VK ID redirectUrl должен совпадать с настройками в VK приложении
-      // Обычно это бэкенд URL, указанный в настройках приложения VK
-      let redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI
-      if (!redirectUrl) {
-        // Пробуем использовать бэкенд URL (стандартный вариант)
-        redirectUrl = `${frontendUrl}/api/auth/vk-callback`
-        // Альтернативный вариант - фронтенд URL:
-        // redirectUrl = `${frontendUrl}/auth/vk-callback`
-      }
+      const redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI || 'https://flirt-ai.ru/api/auth/vk-callback'
 
-      console.log('Initializing VK ID with:', { appId, redirectUrl })
+      console.log('Initializing VK ID OneTap with:', { appId, redirectUrl })
 
       VKID.Config.init({
         app: parseInt(appId),
         redirectUrl: redirectUrl,
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
-        scope: 'email',
+        scope: '', // Пустой scope как в примере
       })
 
-      const oAuth = new VKID.OAuthList()
+      const oneTap = new VKID.OneTap()
 
-      oAuth
+      oneTap
         .render({
           container: containerRef.current,
-          oauthList: ['vkid'],
-          scheme: VKID.Scheme.PRIMARY, // Синяя тема
+          showAlternativeLogin: true, // Показываем альтернативную кнопку входа
         })
-        .on(VKID.WidgetEvents.ERROR, (error) => {
-          console.error('VK ID widget error:', error)
-          setError('Ошибка авторизации VK ID. Проверьте консоль для деталей.')
-          setLoading(false)
-        })
-        .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, async function (payload) {
-          console.log('VK ID LOGIN_SUCCESS:', payload)
+        .on(VKID.WidgetEvents.ERROR, vkidOnError)
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+          console.log('VK ID OneTap LOGIN_SUCCESS:', payload)
           const code = payload.code
           const deviceId = payload.device_id
 
           if (!code || !deviceId) {
-            setError('Не получены необходимые данные от VK ID')
-            setLoading(false)
+            vkidOnError(new Error('Не получены необходимые данные от VK ID'))
             return
           }
 
           setLoading(true)
           setError(null)
 
-          try {
-            // Обмен кода на токен через VK ID SDK
-            console.log('Exchanging code for token...')
-            const authData = await VKID.Auth.exchangeCode(code, deviceId)
-            console.log('Auth data received:', { hasToken: !!authData?.access_token })
-
-            if (!authData || !authData.access_token) {
-              throw new Error('Не удалось получить токен от VK ID')
-            }
-
-            // Отправляем токен на бэкенд для создания/получения пользователя и JWT
-            console.log('Sending token to backend...')
-            const response = await axios.post(`${API_URL}/api/auth/vkid`, {
-              access_token: authData.access_token,
-            })
-
-            if (response.data.token) {
-              login(response.data.token)
-              navigate('/analyze')
-            } else {
-              throw new Error('Не получен токен от сервера')
-            }
-          } catch (err) {
-            console.error('VK ID authentication error:', err)
-            const errorMessage = err.response?.data?.error || err.message || 'Ошибка авторизации'
-            setError(errorMessage)
-            setLoading(false)
-          }
+          // Обмен кода на токен через VK ID SDK
+          VKID.Auth.exchangeCode(code, deviceId)
+            .then(vkidOnSuccess)
+            .catch(vkidOnError)
         })
 
       setInitialized(true)
     } catch (err) {
-      console.error('Failed to initialize VK ID:', err)
+      console.error('Failed to initialize VK ID OneTap:', err)
       setError(`Не удалось инициализировать VK ID: ${err.message}`)
     }
-  }, [initialized, API_URL, login, navigate])
+  }, [initialized, vkidOnSuccess, vkidOnError])
 
-  // Добавляем стили для кнопки VK ID после рендера
-  useEffect(() => {
-    if (containerRef.current && initialized) {
-      // Применяем стили к кнопке VK ID после рендера
-      const styleButton = () => {
-        const buttons = containerRef.current?.querySelectorAll('button, a, [role="button"]')
-        if (buttons && buttons.length > 0) {
-          buttons.forEach((btn) => {
-            btn.style.backgroundColor = '#0077FF'
-            btn.style.background = '#0077FF'
-            btn.style.borderColor = '#0077FF'
-            btn.style.color = '#FFFFFF'
-            btn.style.borderRadius = '6px'
-          })
-        }
-      }
-
-      // Применяем стили сразу и после небольшой задержки
-      styleButton()
-      const timeout = setTimeout(styleButton, 100)
-      const interval = setInterval(styleButton, 500)
-
-      return () => {
-        clearTimeout(timeout)
-        clearInterval(interval)
-      }
-    }
-  }, [initialized])
 
   useEffect(() => {
     let checkInterval = null
@@ -197,13 +164,11 @@ export default function VKIDButton({ className = '' }) {
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
-      <div className="vkid-button-container">
-        <div
-          ref={containerRef}
-          className="flex justify-center"
-          style={{ minHeight: '48px', minWidth: '200px' }}
-        />
-      </div>
+      <div
+        ref={containerRef}
+        className="flex justify-center w-full"
+        style={{ minHeight: '48px' }}
+      />
       {loading && (
         <p className="mt-3 text-sm text-gray-500">Авторизация...</p>
       )}
