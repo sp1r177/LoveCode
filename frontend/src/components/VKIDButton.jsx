@@ -22,14 +22,24 @@ export default function VKIDButton({ className = '' }) {
 
     try {
       // Получаем app_id из переменных окружения
-      // Если не задано, можно попробовать получить с бэкенда или использовать значение из примера
       const appId = import.meta.env.VITE_VK_APP_ID || '54395556'
       
       // Для VK ID SDK redirectUrl должен быть URL на вашем домене
-      // Можно настроить через переменные окружения или использовать текущий домен
-      // Примечание: URL должен совпадать с настройками в VK приложении
-      const redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI || 
-        `${window.location.origin}/auth/vk-callback`
+      // Должен совпадать с настройками в VK приложении
+      // Используем текущий домен или значение из переменных окружения
+      const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin
+      
+      // Для VK ID redirectUrl должен совпадать с настройками в VK приложении
+      // Обычно это бэкенд URL, указанный в настройках приложения VK
+      let redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI
+      if (!redirectUrl) {
+        // Пробуем использовать бэкенд URL (стандартный вариант)
+        redirectUrl = `${frontendUrl}/api/auth/vk-callback`
+        // Альтернативный вариант - фронтенд URL:
+        // redirectUrl = `${frontendUrl}/auth/vk-callback`
+      }
+
+      console.log('Initializing VK ID with:', { appId, redirectUrl })
 
       VKID.Config.init({
         app: parseInt(appId),
@@ -47,26 +57,36 @@ export default function VKIDButton({ className = '' }) {
           oauthList: ['vkid'],
         })
         .on(VKID.WidgetEvents.ERROR, (error) => {
-          console.error('VK ID error:', error)
-          setError('Ошибка авторизации VK ID')
+          console.error('VK ID widget error:', error)
+          setError('Ошибка авторизации VK ID. Проверьте консоль для деталей.')
           setLoading(false)
         })
         .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, async function (payload) {
+          console.log('VK ID LOGIN_SUCCESS:', payload)
           const code = payload.code
           const deviceId = payload.device_id
+
+          if (!code || !deviceId) {
+            setError('Не получены необходимые данные от VK ID')
+            setLoading(false)
+            return
+          }
 
           setLoading(true)
           setError(null)
 
           try {
             // Обмен кода на токен через VK ID SDK
+            console.log('Exchanging code for token...')
             const authData = await VKID.Auth.exchangeCode(code, deviceId)
+            console.log('Auth data received:', { hasToken: !!authData?.access_token })
 
             if (!authData || !authData.access_token) {
               throw new Error('Не удалось получить токен от VK ID')
             }
 
             // Отправляем токен на бэкенд для создания/получения пользователя и JWT
+            console.log('Sending token to backend...')
             const response = await axios.post(`${API_URL}/api/auth/vkid`, {
               access_token: authData.access_token,
             })
@@ -88,7 +108,7 @@ export default function VKIDButton({ className = '' }) {
       setInitialized(true)
     } catch (err) {
       console.error('Failed to initialize VK ID:', err)
-      setError('Не удалось инициализировать VK ID. Проверьте настройки приложения.')
+      setError(`Не удалось инициализировать VK ID: ${err.message}`)
     }
   }, [initialized, API_URL, login, navigate])
 
@@ -114,15 +134,19 @@ export default function VKIDButton({ className = '' }) {
         }
       }, 100)
 
-      // Таймаут через 5 секунд - если SDK не загрузился, показываем ошибку
+      // Таймаут через 10 секунд - если SDK не загрузился, показываем ошибку
       setTimeout(() => {
         if (checkInterval) {
           clearInterval(checkInterval)
           if (!window?.VKIDSDK) {
-            setError('Не удалось загрузить VK ID SDK. Проверьте подключение к интернету.')
+            setError('Не удалось загрузить VK ID SDK. Проверьте подключение к интернету и консоль браузера для деталей.')
+            console.error('VK ID SDK не загрузился за 10 секунд. Проверьте:')
+            console.error('1. Подключение к интернету')
+            console.error('2. Блокировку скриптов браузером/расширениями')
+            console.error('3. Консоль браузера на наличие ошибок CORS или загрузки')
           }
         }
-      }, 5000)
+      }, 10000)
     }
 
     return () => {
@@ -132,11 +156,11 @@ export default function VKIDButton({ className = '' }) {
     }
   }, [initializeVKID, initialized])
 
-  // Если SDK не загрузился, показываем сообщение
-  if (typeof window !== 'undefined' && !window.VKIDSDK && !error) {
+  // Если SDK не загрузился и нет ошибки, показываем сообщение
+  if (typeof window !== 'undefined' && !window.VKIDSDK && !error && !initialized) {
     return (
       <div className={`flex flex-col items-center ${className}`}>
-        <p className="text-sm text-gray-500">Загрузка...</p>
+        <p className="text-sm text-gray-500">Загрузка VK ID...</p>
       </div>
     )
   }
