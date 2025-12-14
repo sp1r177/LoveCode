@@ -50,9 +50,9 @@ WORKDIR /var/www/html
 COPY backend/composer.json* ./
 
 # Устанавливаем PHP зависимости с настройками для надежности
-RUN composer config --global prefer-dist true && \
-    composer config --global github-protocols https && \
-    composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+RUN composer config --global github-protocols https && \
+    composer config --global process-timeout 300 && \
+    composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
 
 # Копируем backend код
 COPY backend/ ./
