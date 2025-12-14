@@ -87,19 +87,36 @@ class AuthController
 
     public function vkid(Request $request, Response $response): Response
     {
+        // Логируем входящий запрос
+        error_log('VK ID auth request received');
+        
+        // Добавляем заголовки CORS
+        $response = $response->withHeader('Access-Control-Allow-Origin', $_ENV['FRONTEND_URL'] ?? '*')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            ->withHeader('Content-Type', 'application/json');
+
+        // Обработка OPTIONS запроса для CORS
+        if ($request->getMethod() === 'OPTIONS') {
+            return $response;
+        }
+
         $body = $request->getParsedBody();
         $accessToken = $body['access_token'] ?? null;
 
+        error_log('VK ID token received: ' . ($accessToken ? 'yes' : 'no'));
+
         if (!$accessToken) {
+            error_log('VK ID error: Access token not provided');
             $response->getBody()->write(json_encode(['error' => 'Access token not provided']));
-            return $response
-                ->withStatus(400)
-                ->withHeader('Content-Type', 'application/json');
+            return $response->withStatus(400);
         }
 
         try {
             $vkAuth = new VkAuthService();
+            error_log('Getting user info from VK...');
             $user = $vkAuth->authenticateWithVkIdToken($accessToken);
+            error_log('User authenticated: ' . $user['id']);
 
             // Создать подписку Free, если её нет
             $subscription = Subscription::getActive($user['id']);
@@ -111,14 +128,14 @@ class AuthController
             $jwtService = new JwtService();
             $token = $jwtService->generateToken($user['id']);
 
+            error_log('JWT token generated successfully');
             $response->getBody()->write(json_encode(['token' => $token]));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $response;
         } catch (\Exception $e) {
             error_log('VK ID auth error: ' . $e->getMessage());
+            error_log('VK ID auth error trace: ' . $e->getTraceAsString());
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response
-                ->withStatus(500)
-                ->withHeader('Content-Type', 'application/json');
+            return $response->withStatus(500);
         }
     }
 }

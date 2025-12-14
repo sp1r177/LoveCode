@@ -63,32 +63,51 @@ class VkAuthService
 
     public function getUserInfo(string $accessToken): array
     {
-        $response = $this->httpClient->get('https://api.vk.com/method/users.get', [
-            'query' => [
-                'access_token' => $accessToken,
-                'fields' => 'photo_200',
-                'v' => '5.131',
-            ],
-        ]);
+        try {
+            error_log('Calling VK API users.get with token...');
+            $response = $this->httpClient->get('https://api.vk.com/method/users.get', [
+                'query' => [
+                    'access_token' => $accessToken,
+                    'fields' => 'photo_200',
+                    'v' => '5.131',
+                ],
+            ]);
 
-        $data = json_decode($response->getBody()->getContents(), true);
-        
-        if (isset($data['error'])) {
-            throw new \RuntimeException('VK API error: ' . $data['error']['error_msg']);
+            $statusCode = $response->getStatusCode();
+            error_log('VK API response status: ' . $statusCode);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            if (isset($data['error'])) {
+                $errorMsg = 'VK API error: ' . ($data['error']['error_msg'] ?? 'Unknown error');
+                error_log($errorMsg);
+                throw new \RuntimeException($errorMsg);
+            }
+
+            $user = $data['response'][0] ?? null;
+            if (!$user) {
+                error_log('VK API: User not found in response');
+                throw new \RuntimeException('User not found');
+            }
+
+            error_log('VK API: User found - ' . ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            return [
+                'vk_id' => (int) $user['id'],
+                'first_name' => $user['first_name'],
+                'last_name' => $user['last_name'],
+                'avatar_url' => $user['photo_200'] ?? null,
+                'email' => null, // VK может вернуть email в токене
+            ];
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            error_log('VK API request exception: ' . $e->getMessage());
+            if ($e->hasResponse()) {
+                $statusCode = $e->getResponse()->getStatusCode();
+                error_log('VK API error status code: ' . $statusCode);
+                $body = $e->getResponse()->getBody()->getContents();
+                error_log('VK API error body: ' . $body);
+            }
+            throw new \RuntimeException('Failed to get user info from VK: ' . $e->getMessage());
         }
-
-        $user = $data['response'][0] ?? null;
-        if (!$user) {
-            throw new \RuntimeException('User not found');
-        }
-
-        return [
-            'vk_id' => (int) $user['id'],
-            'first_name' => $user['first_name'],
-            'last_name' => $user['last_name'],
-            'avatar_url' => $user['photo_200'] ?? null,
-            'email' => null, // VK может вернуть email в токене
-        ];
     }
 
     public function getOrCreateUser(array $tokenData): array
