@@ -1,34 +1,14 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import axios from 'axios'
-import { getApiUrl } from '../utils/api'
+import VKIDButton from '../components/VKIDButton'
 
 export default function Home() {
   const { token } = useAuth()
   const navigate = useNavigate()
-  const API_URL = getApiUrl()
-
-  const handleVkLogin = async () => {
-    try {
-      const response = await axios.post(`${API_URL}/api/auth/vk-init`)
-      if (response.data.auth_url) {
-        window.location.href = response.data.auth_url
-      } else {
-        console.error('No auth_url in response:', response.data)
-        alert('Ошибка: сервер не вернул URL для авторизации. Проверьте конфигурацию.')
-      }
-    } catch (error) {
-      console.error('Failed to init VK auth:', error)
-      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка'
-      alert(`Ошибка авторизации: ${errorMessage}. Проверьте конфигурацию VK приложения.`)
-    }
-  }
 
   const handleGetStarted = () => {
     if (token) {
       navigate('/analyze')
-    } else {
-      handleVkLogin()
     }
   }
 
@@ -42,24 +22,28 @@ export default function Home() {
           Получите глубокий анализ ваших диалогов: тональность, проблемные места
           и готовые варианты ответов для эффективной коммуникации.
         </p>
-        <button
-          onClick={handleGetStarted}
-          className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg text-lg transition-colors"
-        >
-          {token ? 'Начать анализ' : 'Войти через VK'}
-        </button>
-        {!token && (
-          <p className="mt-4 text-sm text-gray-600">
-            Авторизуясь через VK ID, вы принимаете условия{' '}
-            <Link to="/privacy" className="text-primary-600 hover:text-primary-700 underline">
-              Политики конфиденциальности
-            </Link>
-            {' '}и{' '}
-            <Link to="/terms" className="text-primary-600 hover:text-primary-700 underline">
-              Пользовательского соглашения
-            </Link>
-            .
-          </p>
+        {token ? (
+          <button
+            onClick={handleGetStarted}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg text-lg transition-colors"
+          >
+            Начать анализ
+          </button>
+        ) : (
+          <>
+            <VKIDButton className="mb-4" />
+            <p className="mt-4 text-sm text-gray-600">
+              Авторизуясь через VK ID, вы принимаете условия{' '}
+              <Link to="/privacy" className="text-primary-600 hover:text-primary-700 underline">
+                Политики конфиденциальности
+              </Link>
+              {' '}и{' '}
+              <Link to="/terms" className="text-primary-600 hover:text-primary-700 underline">
+                Пользовательского соглашения
+              </Link>
+              .
+            </p>
+          </>
         )}
       </div>
 

@@ -84,5 +84,42 @@ class AuthController
                 ->withHeader('Content-Type', 'application/json');
         }
     }
+
+    public function vkid(Request $request, Response $response): Response
+    {
+        $body = $request->getParsedBody();
+        $accessToken = $body['access_token'] ?? null;
+
+        if (!$accessToken) {
+            $response->getBody()->write(json_encode(['error' => 'Access token not provided']));
+            return $response
+                ->withStatus(400)
+                ->withHeader('Content-Type', 'application/json');
+        }
+
+        try {
+            $vkAuth = new VkAuthService();
+            $user = $vkAuth->authenticateWithVkIdToken($accessToken);
+
+            // Создать подписку Free, если её нет
+            $subscription = Subscription::getActive($user['id']);
+            if (!$subscription) {
+                Subscription::create($user['id'], 'free');
+            }
+
+            // Сгенерировать JWT токен
+            $jwtService = new JwtService();
+            $token = $jwtService->generateToken($user['id']);
+
+            $response->getBody()->write(json_encode(['token' => $token]));
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            error_log('VK ID auth error: ' . $e->getMessage());
+            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
+            return $response
+                ->withStatus(500)
+                ->withHeader('Content-Type', 'application/json');
+        }
+    }
 }
 

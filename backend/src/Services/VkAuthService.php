@@ -107,5 +107,25 @@ class VkAuthService
             return User::findById($userId);
         }
     }
+
+    /**
+     * Обработка VK ID токена (токен уже получен на фронтенде через VK ID SDK)
+     */
+    public function authenticateWithVkIdToken(string $accessToken): array
+    {
+        $userInfo = $this->getUserInfo($accessToken);
+        
+        $user = User::findByVkId($userInfo['vk_id']);
+        
+        if ($user) {
+            // Обновить данные пользователя
+            User::update($user['id'], $userInfo);
+            return User::findById($user['id']);
+        } else {
+            // Создать нового пользователя
+            $userId = User::create($userInfo);
+            return User::findById($userId);
+        }
+    }
 }
 

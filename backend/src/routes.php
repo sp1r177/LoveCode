@@ -11,6 +11,7 @@ return function (App $app) {
     // Авторизация
     $app->post('/api/auth/vk-init', [AuthController::class, 'init']);
     $app->get('/api/auth/vk-callback', [AuthController::class, 'callback']);
+    $app->post('/api/auth/vkid', [AuthController::class, 'vkid']);
 
     // Анализ (требует авторизации)
     $app->post('/api/analyze-dialog', [AnalysisController::class, 'analyze'])
