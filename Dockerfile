@@ -59,7 +59,7 @@ RUN composer config --global github-protocols https && \
 COPY backend/ ./
 
 # Копируем .env файл если он существует
-COPY backend/.env* ./ 2>/dev/null || echo No .env file to copy
+COPY backend/.env ./ 2>/dev/null || true
 
 # Копируем собранный frontend из builder stage
 COPY --from=frontend-builder /app/frontend/dist /var/www/html/frontend/dist
