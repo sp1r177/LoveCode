@@ -9,9 +9,9 @@ use App\Controllers\PaymentController;
 
 return function (App $app) {
     // Авторизация
-    $app->post('/api/auth/vk-init', [AuthController::class, 'init']);
-    $app->get('/api/auth/vk-callback', [AuthController::class, 'callback']);
+    $app->get('/api/auth/vkid', [AuthController::class, 'initVkId']);
     $app->post('/api/auth/vkid', [AuthController::class, 'vkid']);
+    $app->get('/api/auth/vk-callback', [AuthController::class, 'callback']);
 
     // Анализ (требует авторизации)
     $app->post('/api/analyze-dialog', [AnalysisController::class, 'analyze'])
@@ -32,4 +32,3 @@ return function (App $app) {
     
     $app->get('/api/payment/verify/{payment_id}', [PaymentController::class, 'verify']);
 };
-

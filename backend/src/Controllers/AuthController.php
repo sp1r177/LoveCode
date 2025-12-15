@@ -10,6 +10,39 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AuthController
 {
+    public function initVkId(Request $request, Response $response): Response
+    {
+        try {
+            $vkAuth = new VkAuthService();
+            $authUrl = $vkAuth->getAuthUrl();
+            
+            // Log the auth URL for debugging
+            error_log('VK Auth URL generated: ' . $authUrl);
+            
+            if (empty($authUrl) || !filter_var($authUrl, FILTER_VALIDATE_URL)) {
+                error_log('VK Auth URL is invalid or empty. Check VK_APP_ID/VK_CLIENT_ID and VK_REDIRECT_URI');
+                $response->getBody()->write(json_encode(['error' => 'VK authentication not configured']));
+                return $response
+                    ->withStatus(500)
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withHeader('Access-Control-Allow-Origin', $this->getAllowedOrigin($request));
+            }
+            
+            // Return JSON with redirect URL
+            $response->getBody()->write(json_encode(['auth_url' => $authUrl]));
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Access-Control-Allow-Origin', $this->getAllowedOrigin($request));
+        } catch (\Exception $e) {
+            error_log('VK Auth init error: ' . $e->getMessage());
+            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
+            return $response
+                ->withStatus(500)
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Access-Control-Allow-Origin', $this->getAllowedOrigin($request));
+        }
+    }
+
     public function init(Request $request, Response $response): Response
     {
         try {
@@ -155,5 +188,21 @@ class AuthController
             ]));
             return $response->withStatus(500);
         }
+    }
+    
+    /**
+     * Get allowed origin for CORS headers
+     */
+    private function getAllowedOrigin(Request $request): string
+    {
+        $origin = $request->getHeaderLine('Origin');
+        $allowedOrigins = explode(',', $_ENV['CORS_ORIGINS'] ?? 'https://flirt-ai.ru,https://www.flirt-ai.ru');
+        
+        if (in_array($origin, $allowedOrigins)) {
+            return $origin;
+        }
+        
+        // Return first allowed origin as default
+        return $allowedOrigins[0] ?? '*';
     }
 }

@@ -1,10 +1,10 @@
 // Функция для получения API URL
-// Если VITE_API_URL задан (встроен в сборку), используем его
+// Если VITE_API_BASE_URL задан (встроен в сборку), используем его
 // Иначе определяем из текущего домена
 export function getApiUrl() {
   // Проверяем встроенную переменную окружения
-  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'http://localhost:8080') {
-    return import.meta.env.VITE_API_URL
+  if (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL !== 'http://localhost:8080') {
+    return import.meta.env.VITE_API_BASE_URL
   }
   
   // Определяем из текущего URL
@@ -18,4 +18,3 @@ export function getApiUrl() {
 }
 
 export const API_URL = getApiUrl()
-

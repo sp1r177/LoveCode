@@ -18,15 +18,25 @@ $app->addBodyParsingMiddleware();
 
 // Middleware для CORS (должен быть первым)
 $app->add(function (Request $request, $handler): Response {
-    $frontendUrl = $_ENV['FRONTEND_URL'] ?? '*';
+    // Parse allowed origins from env
+    $allowedOrigins = explode(',', $_ENV['CORS_ORIGINS'] ?? 'https://flirt-ai.ru,https://www.flirt-ai.ru');
+    $origin = $request->getHeaderLine('Origin');
     
-    // Обработка OPTIONS запросов
+    // Check if origin is allowed
+    $allowedOrigin = '*';
+    if (in_array($origin, $allowedOrigins)) {
+        $allowedOrigin = $origin;
+    } else if (count($allowedOrigins) > 0) {
+        $allowedOrigin = $allowedOrigins[0];
+    }
+    
+    // Handle OPTIONS preflight requests
     if ($request->getMethod() === 'OPTIONS') {
         $response = new \Slim\Psr7\Response();
         return $response
-            ->withHeader('Access-Control-Allow-Origin', $frontendUrl)
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->withHeader('Access-Control-Allow-Origin', $allowedOrigin)
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-API-Key')
             ->withHeader('Access-Control-Allow-Credentials', 'true')
             ->withHeader('Access-Control-Max-Age', '3600')
             ->withStatus(204);
@@ -34,9 +44,9 @@ $app->add(function (Request $request, $handler): Response {
     
     $response = $handler->handle($request);
     return $response
-        ->withHeader('Access-Control-Allow-Origin', $frontendUrl)
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        ->withHeader('Access-Control-Allow-Origin', $allowedOrigin)
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-API-Key')
         ->withHeader('Access-Control-Allow-Credentials', 'true');
 });
 
