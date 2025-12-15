@@ -16,6 +16,9 @@ class VkAuthService
         $config = require __DIR__ . '/../../config/config.php';
         $this->config = $config['vk'];
         
+        // Log config for debugging
+        error_log('VK Config: ' . json_encode($this->config));
+        
         // Валидация конфигурации
         if (empty($this->config['app_id'])) {
             throw new \RuntimeException('VK App ID is not configured. Set VK_APP_ID or VK_CLIENT_ID environment variable.');

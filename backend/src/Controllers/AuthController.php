@@ -12,6 +12,14 @@ class AuthController
 {
     public function initVkId(Request $request, Response $response): Response
     {
+        error_log('VKID START HIT');
+        
+        // Debug environment variables
+        error_log('VK_APP_ID: ' . ($_ENV['VK_APP_ID'] ?? 'NOT SET'));
+        error_log('VK_APP_SECRET: ' . ($_ENV['VK_APP_SECRET'] ?? 'NOT SET'));
+        error_log('VK_REDIRECT_URI: ' . ($_ENV['VK_REDIRECT_URI'] ?? 'NOT SET'));
+        error_log('CORS_ORIGINS: ' . ($_ENV['CORS_ORIGINS'] ?? 'NOT SET'));
+        
         try {
             $vkAuth = new VkAuthService();
             $authUrl = $vkAuth->getAuthUrl();
@@ -20,7 +28,8 @@ class AuthController
             error_log('VK Auth URL generated: ' . $authUrl);
             
             if (empty($authUrl) || !filter_var($authUrl, FILTER_VALIDATE_URL)) {
-                error_log('VK Auth URL is invalid or empty. Check VK_APP_ID/VK_CLIENT_ID and VK_REDIRECT_URI');
+                $errorMessage = 'VK Auth URL is invalid or empty. Check VK_APP_ID/VK_CLIENT_ID and VK_REDIRECT_URI';
+                error_log('VKID START HIT ERROR: ' . $errorMessage);
                 $response->getBody()->write(json_encode(['error' => 'VK authentication not configured']));
                 return $response
                     ->withStatus(500)
@@ -34,7 +43,9 @@ class AuthController
                 ->withHeader('Content-Type', 'application/json')
                 ->withHeader('Access-Control-Allow-Origin', $this->getAllowedOrigin($request));
         } catch (\Exception $e) {
-            error_log('VK Auth init error: ' . $e->getMessage());
+            $errorMessage = 'VK Auth init error: ' . $e->getMessage();
+            error_log('VKID START HIT ERROR: ' . $errorMessage);
+            error_log('VKID START HIT ERROR TRACE: ' . $e->getTraceAsString());
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response
                 ->withStatus(500)

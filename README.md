@@ -170,7 +170,7 @@ curl -i -X OPTIONS https://flirt-ai.ru/api/auth/vkid -H "Origin: https://flirt-a
    - `CORS_ORIGINS`
 
 2. Проверьте, что маршруты работают:
-   - `GET /api/auth/vkid` должен возвращать JSON с URL авторизации
+   - `GET /api/auth/vkid` должен возвращать JSON с URL авторизации и статус 200 (НЕ 403)
    - `OPTIONS /api/auth/vkid` должен возвращать 204 с CORS заголовками
 
 3. Проверьте, что кнопка "Продолжить как ..." работает корректно без открытия новых вкладок

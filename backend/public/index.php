@@ -32,6 +32,9 @@ $app->add(function (Request $request, $handler): Response {
     
     // Handle OPTIONS preflight requests
     if ($request->getMethod() === 'OPTIONS') {
+        // Log OPTIONS requests for debugging
+        error_log('OPTIONS request received for: ' . $request->getUri()->getPath());
+        
         $response = new \Slim\Psr7\Response();
         return $response
             ->withHeader('Access-Control-Allow-Origin', $allowedOrigin)
@@ -41,6 +44,9 @@ $app->add(function (Request $request, $handler): Response {
             ->withHeader('Access-Control-Max-Age', '3600')
             ->withStatus(204);
     }
+    
+    // Log all requests for debugging
+    error_log('Request received: ' . $request->getMethod() . ' ' . $request->getUri()->getPath());
     
     $response = $handler->handle($request);
     return $response
