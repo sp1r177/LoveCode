@@ -26,7 +26,7 @@ return [
     ],
     'yoomoney' => [
         'receiver' => $_ENV['YOOMONEY_RECEIVER'] ?? '',
-        'secret' => $_ENV['YOOMONEY_SECRET'] ?? '',
+        'secret' => $_ENV['YOUMONEY_SECRET'] ?? '',
     ],
     'plans' => [
         'free' => [
@@ -52,4 +52,3 @@ return [
         ],
     ],
 ];
-

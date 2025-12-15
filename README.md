@@ -149,6 +149,32 @@ cd frontend
 npm run dev
 ```
 
+## 🧪 Тестирование VK ID авторизации
+
+### Проверка статуса endpoint'ов
+
+```bash
+# Проверка GET /api/auth/vkid
+curl -i https://flirt-ai.ru/api/auth/vkid
+
+# Проверка OPTIONS preflight запроса
+curl -i -X OPTIONS https://flirt-ai.ru/api/auth/vkid -H "Origin: https://flirt-ai.ru" -H "Access-Control-Request-Method: GET"
+```
+
+### Как проверить исправление ошибок
+
+1. Убедитесь, что переменные окружения установлены правильно:
+   - `VK_APP_ID`
+   - `VK_APP_SECRET`
+   - `VK_REDIRECT_URI`
+   - `CORS_ORIGINS`
+
+2. Проверьте, что маршруты работают:
+   - `GET /api/auth/vkid` должен возвращать JSON с URL авторизации
+   - `OPTIONS /api/auth/vkid` должен возвращать 204 с CORS заголовками
+
+3. Проверьте, что кнопка "Продолжить как ..." работает корректно без открытия новых вкладок
+
 ## ⚙️ Конфигурация
 
 ### Переменные окружения (Backend)
@@ -169,6 +195,9 @@ DB_PASSWORD=your_password
 VK_APP_ID=your_vk_app_id
 VK_APP_SECRET=your_vk_app_secret
 VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
+
+# CORS
+CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com
 
 # JWT
 JWT_SECRET=your-secret-key-min-32-chars
@@ -191,7 +220,9 @@ FRONTEND_URL=https://your-domain.com
 Создайте файл `frontend/.env`:
 
 ```env
-VITE_API_URL=https://your-domain.com
+VITE_API_BASE_URL=https://your-domain.com
+VITE_VK_APP_ID=your_vk_app_id
+VITE_VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
 ```
 
 ## 🔐 Настройка VK OAuth
@@ -292,7 +323,8 @@ VITE_API_URL=https://your-domain.com
 ## 🧪 API Endpoints
 
 ### Авторизация
-- `POST /api/auth/vk-init` — Получить URL для авторизации VK
+- `GET /api/auth/vkid` — Получить URL для авторизации VK
+- `POST /api/auth/vkid` — Обработать токен VK ID
 - `GET /api/auth/vk-callback` — Callback от VK (редирект)
 
 ### Анализ (требует авторизации)
