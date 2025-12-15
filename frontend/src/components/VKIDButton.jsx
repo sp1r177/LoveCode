@@ -38,7 +38,7 @@ export default function VKIDButton({ className = '' }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          withCredentials: false, // Отключаем credentials для избежания CORS проблем
+          withCredentials: true, // Включаем credentials для правильной работы CORS
         }
       )
 
@@ -50,7 +50,22 @@ export default function VKIDButton({ className = '' }) {
       }
     } catch (err) {
       console.error('VK ID authentication error:', err)
-      const errorMessage = err.response?.data?.error || err.message || 'Ошибка авторизации'
+      // Улучшенная обработка ошибок
+      let errorMessage = 'Ошибка авторизации';
+      if (err.response) {
+        // Сервер ответил ошибкой
+        if (err.response.status === 403) {
+          errorMessage = 'Доступ запрещен. Проверьте настройки CORS и конфигурацию приложения VK.';
+        } else {
+          errorMessage = err.response.data?.error || `Ошибка сервера: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        // Запрос был сделан, но ответа не получено
+        errorMessage = 'Нет ответа от сервера. Проверьте подключение к интернету.';
+      } else {
+        // Что-то пошло не так при настройке запроса
+        errorMessage = err.message || 'Ошибка авторизации';
+      }
       setError(errorMessage)
       setLoading(false)
     }
@@ -79,7 +94,7 @@ export default function VKIDButton({ className = '' }) {
       VKID.Config.init({
         app: parseInt(appId),
         redirectUrl: redirectUrl,
-        responseMode: VKID.ConfigResponseMode.Callback,
+        responseMode: VKID.ConfigResponseMode.Code, // Используем Code вместо Callback для лучшей совместимости
         source: VKID.ConfigSource.LOWCODE,
         scope: '',
       })

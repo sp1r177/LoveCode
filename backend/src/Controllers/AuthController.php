@@ -90,9 +90,12 @@ class AuthController
         // Логируем входящий запрос
         error_log('VK ID auth request received. Method: ' . $request->getMethod());
         
+        // Получаем FRONTEND_URL из переменных окружения
+        $frontendUrl = $_ENV['FRONTEND_URL'] ?? '*';
+        
         // Добавляем заголовки CORS в начале
         $response = $response
-            ->withHeader('Access-Control-Allow-Origin', $_ENV['FRONTEND_URL'] ?? '*')
+            ->withHeader('Access-Control-Allow-Origin', $frontendUrl)
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
             ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
             ->withHeader('Access-Control-Allow-Credentials', 'true')
@@ -150,4 +153,3 @@ class AuthController
         }
     }
 }
-
