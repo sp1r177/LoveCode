@@ -13,6 +13,41 @@ export default function VKIDButton({ className = '' }) {
   const navigate = useNavigate()
   const API_URL = getApiUrl()
 
+  const handleVKLogin = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Call backend to get VK auth URL
+      const response = await axios.get(`${API_URL}/api/auth/vkid`, {
+        withCredentials: true
+      })
+      
+      if (response.data.auth_url) {
+        // Redirect to VK auth URL
+        window.location.href = response.data.auth_url
+      } else {
+        throw new Error('Failed to get authorization URL')
+      }
+    } catch (err) {
+      console.error('VK ID init error:', err)
+      let errorMessage = 'Ошибка авторизации'
+      if (err.response) {
+        if (err.response.status === 403) {
+          errorMessage = 'Доступ запрещен. Проверьте настройки CORS и конфигурацию приложения VK.'
+        } else {
+          errorMessage = err.response.data?.error || `Ошибка сервера: ${err.response.status}`
+        }
+      } else if (err.request) {
+        errorMessage = 'Нет ответа от сервера. Проверьте подключение к интернету.'
+      } else {
+        errorMessage = err.message || 'Ошибка авторизации'
+      }
+      setError(errorMessage)
+      setLoading(false)
+    }
+  }, [API_URL])
+
   const vkidOnSuccess = useCallback(async (data) => {
     console.log('VK ID success data:', data)
     
