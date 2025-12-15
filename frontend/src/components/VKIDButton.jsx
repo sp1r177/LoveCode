@@ -27,10 +27,20 @@ export default function VKIDButton({ className = '' }) {
 
     try {
       // Отправляем токен на бэкенд для создания/получения пользователя и JWT
-      console.log('Sending token to backend...')
-      const response = await axios.post(`${API_URL}/api/auth/vkid`, {
-        access_token: data.access_token,
-      })
+      console.log('Sending token to backend...', { API_URL, token: data.access_token?.substring(0, 20) + '...' })
+      
+      const response = await axios.post(
+        `${API_URL}/api/auth/vkid`,
+        {
+          access_token: data.access_token,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          withCredentials: false, // Отключаем credentials для избежания CORS проблем
+        }
+      )
 
       if (response.data.token) {
         login(response.data.token)
@@ -71,7 +81,7 @@ export default function VKIDButton({ className = '' }) {
         redirectUrl: redirectUrl,
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
-        scope: '', // Пустой scope как в примере
+        scope: '',
       })
 
       const oneTap = new VKID.OneTap()
@@ -79,11 +89,12 @@ export default function VKIDButton({ className = '' }) {
       oneTap
         .render({
           container: containerRef.current,
-          showAlternativeLogin: true, // Показываем альтернативную кнопку входа
+          showAlternativeLogin: true,
         })
         .on(VKID.WidgetEvents.ERROR, vkidOnError)
         .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
           console.log('VK ID OneTap LOGIN_SUCCESS:', payload)
+          
           const code = payload.code
           const deviceId = payload.device_id
 
@@ -100,6 +111,22 @@ export default function VKIDButton({ className = '' }) {
             .then(vkidOnSuccess)
             .catch(vkidOnError)
         })
+        
+      // Предотвращаем открытие новых окон/вкладок при клике
+      if (containerRef.current) {
+        containerRef.current.addEventListener('click', function(e) {
+          // Разрешаем только клики внутри виджета VK ID
+          const target = e.target
+          if (target && target.closest('[data-vkid]')) {
+            // Разрешаем стандартное поведение для элементов VK ID
+            return
+          }
+          // Для других элементов предотвращаем навигацию
+          if (target.tagName === 'A' || target.closest('a')) {
+            e.preventDefault()
+          }
+        }, true)
+      }
 
       setInitialized(true)
     } catch (err) {

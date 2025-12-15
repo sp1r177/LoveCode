@@ -88,20 +88,31 @@ class AuthController
     public function vkid(Request $request, Response $response): Response
     {
         // Логируем входящий запрос
-        error_log('VK ID auth request received');
+        error_log('VK ID auth request received. Method: ' . $request->getMethod());
         
-        // Добавляем заголовки CORS
-        $response = $response->withHeader('Access-Control-Allow-Origin', $_ENV['FRONTEND_URL'] ?? '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        // Добавляем заголовки CORS в начале
+        $response = $response
+            ->withHeader('Access-Control-Allow-Origin', $_ENV['FRONTEND_URL'] ?? '*')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+            ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->withHeader('Access-Control-Allow-Credentials', 'true')
             ->withHeader('Content-Type', 'application/json');
 
         // Обработка OPTIONS запроса для CORS
         if ($request->getMethod() === 'OPTIONS') {
-            return $response;
+            error_log('VK ID OPTIONS request - returning 204');
+            return $response->withStatus(204);
+        }
+
+        // Проверяем метод запроса
+        if ($request->getMethod() !== 'POST') {
+            error_log('VK ID error: Wrong method - ' . $request->getMethod());
+            $response->getBody()->write(json_encode(['error' => 'Method not allowed']));
+            return $response->withStatus(405);
         }
 
         $body = $request->getParsedBody();
+        error_log('VK ID request body: ' . json_encode($body));
         $accessToken = $body['access_token'] ?? null;
 
         error_log('VK ID token received: ' . ($accessToken ? 'yes' : 'no'));
