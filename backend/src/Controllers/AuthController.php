@@ -99,6 +99,7 @@ class AuthController
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
             ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
             ->withHeader('Access-Control-Allow-Credentials', 'true')
+            ->withHeader('Access-Control-Expose-Headers', '*')
             ->withHeader('Content-Type', 'application/json');
 
         // Обработка OPTIONS запроса для CORS
@@ -148,7 +149,10 @@ class AuthController
         } catch (\Exception $e) {
             error_log('VK ID auth error: ' . $e->getMessage());
             error_log('VK ID auth error trace: ' . $e->getTraceAsString());
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
+            $response->getBody()->write(json_encode([
+                'error' => $e->getMessage(),
+                'type' => get_class($e)
+            ]));
             return $response->withStatus(500);
         }
     }

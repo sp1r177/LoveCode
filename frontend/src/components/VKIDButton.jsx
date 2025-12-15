@@ -38,7 +38,7 @@ export default function VKIDButton({ className = '' }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          withCredentials: true, // Включаем credentials для правильной работы CORS
+          withCredentials: true,
         }
       )
 
@@ -91,12 +91,13 @@ export default function VKIDButton({ className = '' }) {
 
       console.log('Initializing VK ID OneTap with:', { appId, redirectUrl })
 
+      // Используем правильную конфигурацию для inline авторизации
       VKID.Config.init({
         app: parseInt(appId),
         redirectUrl: redirectUrl,
-        responseMode: VKID.ConfigResponseMode.Code, // Используем Code вместо Callback для лучшей совместимости
+        responseMode: VKID.ConfigResponseMode.Code, // Используем Code response mode
         source: VKID.ConfigSource.LOWCODE,
-        scope: '',
+        scope: 'email', // Добавляем scope для получения email
       })
 
       const oneTap = new VKID.OneTap()
@@ -129,18 +130,22 @@ export default function VKIDButton({ className = '' }) {
         
       // Предотвращаем открытие новых окон/вкладок при клике
       if (containerRef.current) {
-        containerRef.current.addEventListener('click', function(e) {
-          // Разрешаем только клики внутри виджета VK ID
-          const target = e.target
-          if (target && target.closest('[data-vkid]')) {
-            // Разрешаем стандартное поведение для элементов VK ID
-            return
-          }
-          // Для других элементов предотвращаем навигацию
+        const handleClick = function(e) {
+          // Останавливаем всплытие события для всех кликов внутри контейнера
+          e.stopPropagation();
+          
+          // Предотвращаем действие по умолчанию для ссылок
+          const target = e.target;
           if (target.tagName === 'A' || target.closest('a')) {
-            e.preventDefault()
+            e.preventDefault();
           }
-        }, true)
+        };
+        
+        // Добавляем обработчик ко всем элементам внутри контейнера
+        containerRef.current.addEventListener('click', handleClick, true);
+        
+        // Сохраняем ссылку на функцию для возможности удаления
+        containerRef.current._vkClickHandler = handleClick;
       }
 
       setInitialized(true)
@@ -191,6 +196,10 @@ export default function VKIDButton({ className = '' }) {
     return () => {
       if (checkInterval) {
         clearInterval(checkInterval)
+      }
+      // Удаляем обработчик событий при размонтировании
+      if (containerRef.current && containerRef.current._vkClickHandler) {
+        containerRef.current.removeEventListener('click', containerRef.current._vkClickHandler, true);
       }
     }
   }, [initializeVKID, initialized])

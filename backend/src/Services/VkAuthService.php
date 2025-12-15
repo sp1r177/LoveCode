@@ -43,22 +43,27 @@ class VkAuthService
 
     public function exchangeCodeForToken(string $code): array
     {
-        $response = $this->httpClient->get('https://oauth.vk.com/access_token', [
-            'query' => [
-                'client_id' => $this->config['app_id'],
-                'client_secret' => $this->config['app_secret'],
-                'redirect_uri' => $this->config['redirect_uri'],
-                'code' => $code,
-            ],
-        ]);
+        try {
+            $response = $this->httpClient->get('https://oauth.vk.com/access_token', [
+                'query' => [
+                    'client_id' => $this->config['app_id'],
+                    'client_secret' => $this->config['app_secret'],
+                    'redirect_uri' => $this->config['redirect_uri'],
+                    'code' => $code,
+                ],
+            ]);
 
-        $data = json_decode($response->getBody()->getContents(), true);
-        
-        if (isset($data['error'])) {
-            throw new \RuntimeException('VK OAuth error: ' . $data['error_description']);
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            if (isset($data['error'])) {
+                throw new \RuntimeException('VK OAuth error: ' . $data['error_description']);
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            error_log('VK OAuth token exchange error: ' . $e->getMessage());
+            throw new \RuntimeException('Failed to exchange code for token: ' . $e->getMessage());
         }
-
-        return $data;
     }
 
     public function getUserInfo(string $accessToken): array
@@ -68,7 +73,7 @@ class VkAuthService
             $response = $this->httpClient->get('https://api.vk.com/method/users.get', [
                 'query' => [
                     'access_token' => $accessToken,
-                    'fields' => 'photo_200',
+                    'fields' => 'photo_200,email',
                     'v' => '5.131',
                 ],
             ]);
@@ -96,7 +101,7 @@ class VkAuthService
                 'first_name' => $user['first_name'],
                 'last_name' => $user['last_name'],
                 'avatar_url' => $user['photo_200'] ?? null,
-                'email' => null, // VK может вернуть email в токене
+                'email' => $user['email'] ?? null,
             ];
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             error_log('VK API request exception: ' . $e->getMessage());
@@ -105,7 +110,15 @@ class VkAuthService
                 error_log('VK API error status code: ' . $statusCode);
                 $body = $e->getResponse()->getBody()->getContents();
                 error_log('VK API error body: ' . $body);
+                
+                // Handle 403 specifically
+                if ($statusCode === 403) {
+                    throw new \RuntimeException('Access forbidden. Check your VK app credentials and permissions.');
+                }
             }
+            throw new \RuntimeException('Failed to get user info from VK: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            error_log('VK API general exception: ' . $e->getMessage());
             throw new \RuntimeException('Failed to get user info from VK: ' . $e->getMessage());
         }
     }
@@ -147,4 +160,3 @@ class VkAuthService
         }
     }
 }
-
