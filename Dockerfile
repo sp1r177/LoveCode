@@ -55,11 +55,9 @@ RUN composer config --global github-protocols https && \
     composer config --global process-timeout 300 && \
     composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
 
-# Копируем backend код
-COPY backend/ ./
-
-# Копируем .env файл если он существует
-COPY backend/.env ./ 2>/dev/null || true
+# Копируем backend код и .env файл
+COPY backend/ ./backend/
+RUN cp -r backend/. /var/www/html/ && rm -rf backend/
 
 # Копируем собранный frontend из builder stage
 COPY --from=frontend-builder /app/frontend/dist /var/www/html/frontend/dist
