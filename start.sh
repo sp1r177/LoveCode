@@ -5,29 +5,31 @@ LOG_FILE="/var/www/html/.cursor/debug.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log_debug() {
-    local hypothesis=$1
-    local message=$2
-    local data=$3
+    local message=$1
+    local data=$2
     local timestamp=$(date +%s)000
     local location="start.sh"
-    echo "{\"timestamp\":$timestamp,\"location\":\"$location\",\"message\":\"$message\",\"data\":$data,\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"$hypothesis\"}" >> "$LOG_FILE" 2>&1 || true
+    echo "{\"timestamp\":$timestamp,\"location\":\"$location\",\"message\":\"$message\",\"data\":$data}" >> "$LOG_FILE" 2>&1 || true
 }
 
 # #region agent log - Hypothesis A, E: Проверяем конфигурацию PHP-FPM перед запуском
-log_debug "A" "Проверка конфигурации PHP-FPM" "{\"action\":\"checking_pool_config\"}"
+log_debug "Проверка конфигурации PHP-FPM" "{\"action\":\"checking_pool_config\"}"
 POOL_CONFIG="/usr/local/etc/php-fpm.d/www.conf"
 if [ -f "$POOL_CONFIG" ]; then
     LISTEN_LINE=$(grep "^listen" "$POOL_CONFIG" | head -1 || echo "not_found")
     ESCAPED_LISTEN=$(echo "$LISTEN_LINE" | sed 's/"/\\"/g')
-    log_debug "A" "Найдена конфигурация pool" "{\"config_file\":\"$POOL_CONFIG\",\"listen_line\":\"$ESCAPED_LISTEN\"}"
+    log_debug "Найдена конфигурация pool" "{\"config_file\":\"$POOL_CONFIG\",\"listen_line\":\"$ESCAPED_LISTEN\"}
 else
-    log_debug "A" "Конфигурация pool не найдена" "{\"config_file\":\"$POOL_CONFIG\"}"
+    log_debug "Конфигурация pool не найдена" "{\"config_file\":\"$POOL_CONFIG\"}
 fi
 # #endregion
 
 # Создаём директорию для сокета PHP-FPM, если её нет
 mkdir -p /var/run/php
 mkdir -p /run/php
+
+EXPECTED_PATH="/var/run/php/php8.2-fpm.sock"
+ALT_PATHS=("/run/php/php8.2-fpm.sock" "/var/run/php-fpm.sock" "/run/php-fpm.sock" "/tmp/php-fpm.sock")
 
 # #region agent log - Hypothesis C: Проверяем права на директории
 if [ -d /var/run/php ]; then
@@ -51,61 +53,48 @@ log_debug "C" "Проверка прав на директории сокето�
 log_debug "D" "Запуск PHP-FPM" "{\"command\":\"php-fpm -D\"}"
 php-fpm -D
 
-# #region agent log - Hypothesis D: Проверяем через разные интервалы
-log_debug "D" "Ожидание запуска PHP-FPM (0s)" "{\"action\":\"wait_start\",\"elapsed\":0}"
-sleep 1
-log_debug "D" "Ожидание запуска PHP-FPM (1s)" "{\"action\":\"wait_start\",\"elapsed\":1}"
-sleep 1
-log_debug "D" "Ожидание запуска PHP-FPM (2s)" "{\"action\":\"wait_start\",\"elapsed\":2}"
-# #endregion
-
-# #region agent log - Hypothesis A, E: Ищем сокет во всех возможных местах
-log_debug "A" "Поиск сокета PHP-FPM" "{\"action\":\"searching_socket\"}"
-FOUND_SOCKETS=$(find /var/run /run /tmp -name "*fpm*.sock" 2>/dev/null || echo "")
-ESCAPED_SOCKETS=$(echo "$FOUND_SOCKETS" | sed 's/"/\\"/g' | tr '\n' ' ')
-log_debug "A" "Найденные сокеты" "{\"sockets\":\"$ESCAPED_SOCKETS\"}"
-
-EXPECTED_PATH="/var/run/php/php8.2-fpm.sock"
-ALT_PATHS=("/run/php/php8.2-fpm.sock" "/var/run/php-fpm.sock" "/run/php-fpm.sock" "/tmp/php-fpm.sock")
-SOCKET_FOUND=""
-# #endregion
-
-# #region agent log - Hypothesis E: Проверяем все альтернативные пути
-for path in "$EXPECTED_PATH" "${ALT_PATHS[@]}"; do
-    if [ -S "$path" ]; then
-        log_debug "E" "Сокет найден" "{\"path\":\"$path\",\"exists\":true}"
-        SOCKET_FOUND="$path"
-        break
-    else
-        log_debug "E" "Сокет не найден по пути" "{\"path\":\"$path\",\"exists\":false}"
-    fi
+# Ждем появления сокета
+MAX_WAIT=10
+WAIT_COUNT=0
+while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+    log_debug "D" "Ожидание сокета PHP-FPM (${WAIT_COUNT}s)" "{\"action\":\"waiting_for_socket\",\"elapsed\":${WAIT_COUNT}}"
+    sleep 1
+    WAIT_COUNT=$((WAIT_COUNT + 1))
+    
+    # Проверяем каждый возможный путь к сокету
+    for path in "$EXPECTED_PATH" "${ALT_PATHS[@]}"; do
+        if [ -S "$path" ]; then
+            SOCKET_FOUND="$path"
+            log_debug "D" "Сокет найден" "{\"path\":\"$SOCKET_FOUND\",\"found_at\":\"${WAIT_COUNT}s\"}"
+            break 2
+        fi
+    done
 done
-# #endregion
 
-# #region agent log - Hypothesis B: Проверяем, не использует ли PHP-FPM TCP
+# Если сокет не найден в предыдущем цикле, ищем его во всех возможных местах
 if [ -z "$SOCKET_FOUND" ]; then
-    TCP_LISTEN=$(ss -tlnp 2>/dev/null | grep php-fpm || netstat -tlnp 2>/dev/null | grep php-fpm || echo "not_found")
-    ESCAPED_TCP=$(echo "$TCP_LISTEN" | sed 's/"/\\"/g' | tr '\n' ' ')
-    log_debug "B" "Проверка TCP подключения" "{\"tcp_listen\":\"$ESCAPED_TCP\"}"
-fi
-# #endregion
-
-if [ -z "$SOCKET_FOUND" ]; then
-    # #region agent log - Hypothesis A, B: Выводим конфигурацию для диагностики
-    if [ -f "$POOL_CONFIG" ]; then
-        POOL_CONTENT=$(cat "$POOL_CONFIG" | grep -E "^(listen|user|group)" | head -5 | tr '\n' ';')
-        ESCAPED_POOL=$(echo "$POOL_CONTENT" | sed 's/"/\\"/g')
-        log_debug "A" "Конфигурация pool для диагностики" "{\"pool_config_excerpt\":\"$ESCAPED_POOL\"}"
+    log_debug "A" "Поиск сокета PHP-FPM" "{\"action\":\"searching_socket\"}"
+    FOUND_SOCKETS=$(find /var/run /run /tmp -name "*fpm*.sock" 2>/dev/null || echo "")
+    ESCAPED_SOCKETS=$(echo "$FOUND_SOCKETS" | sed 's/"/\\"/g' | tr '\n' ' ')
+    log_debug "A" "Найденные сокеты" "{\"sockets\":\"$ESCAPED_SOCKETS\"}"
+    
+    # Используем первый найденный сокет
+    SOCKET_FOUND=$(echo "$FOUND_SOCKETS" | head -1)
+    
+    # Проверяем, что найденный сокет не пустой
+    if [ -z "$SOCKET_FOUND" ]; then
+        SOCKET_FOUND=""
     fi
-    # #endregion
+fi
+
+if [ -z "$SOCKET_FOUND" ]; then
     echo "Ошибка: PHP-FPM сокет не найден"
-    CHECKED_PATHS_JSON=$(printf ',"%s"' "${ALT_PATHS[@]}" | sed 's/^,//')
-    log_debug "A" "ОШИБКА: сокет не найден" "{\"expected\":\"$EXPECTED_PATH\",\"checked_paths\":[\"$EXPECTED_PATH\",$CHECKED_PATHS_JSON]}"
+    log_debug "A" "ОШИБКА: сокет не найден" "{\"expected\":\"$EXPECTED_PATH\",\"checked_paths\":[\"$EXPECTED_PATH\"]}"
     exit 1
 else
     log_debug "A" "Сокет успешно найден, обновляем nginx.conf" "{\"socket_path\":\"$SOCKET_FOUND\"}"
     # Обновляем nginx.conf с правильным путём к сокету
-    sed -i "s|unix:/var/run/php/php8.2-fpm.sock|unix:$SOCKET_FOUND|g" /etc/nginx/sites-available/default
+    sed -i "s|FASTCGI_SOCKET|$SOCKET_FOUND|g" /etc/nginx/sites-available/default
 fi
 
 # Запускаем Nginx в foreground режиме
