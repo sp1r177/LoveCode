@@ -7,11 +7,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # Устанавливаем зависимости (используем npm install, если нет package-lock.json)
-RUN if [ -f package-lock.json ]; then \
-        npm ci; \
-    else \
-        npm install; \
-    fi
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Копируем исходники frontend
 COPY frontend/ ./
@@ -67,23 +63,19 @@ RUN if [ ! -d "/var/www/html/public" ]; then echo "ERROR: Public directory not c
 # Настраиваем права и создаём директорию для логов
 RUN chown -R www-data:www-data /var/www/html && \
     mkdir -p /var/www/html/.cursor && \
-    chown -R www-data:www-data /var/www/html/.cursor && \
-    # Проверяем, что index.php существует
-    if [ ! -f /var/www/html/public/index.php ]; then \
+    chown -R www-data:www-data /var/www/html/.cursor
+
+# Проверяем, что index.php существует
+RUN if [ ! -f /var/www/html/public/index.php ]; then \
         echo "ERROR: index.php not found in public directory"; \
         exit 1; \
-    fi && \
-    # Проверяем, что frontend файлы существуют
-    if [ ! -d /var/www/html/public/assets ] && [ ! -f /var/www/html/public/index.html ]; then \
-        echo "WARNING: Frontend files not found in public directory"; \
     fi
-    
-    # Убедимся, что хотя бы один из необходимых файлов существует
-    if [ ! -f /var/www/html/public/index.html ] && [ ! -f /var/www/html/public/index.php ]; then \
-        echo "ERROR: Neither index.html nor index.php found in public directory"; \
-        ls -la /var/www/html/public 2>&1 || echo "Cannot list public directory"; \
-        exit 1; \
-    fi
+
+# Проверяем, что frontend файлы существуют
+RUN if [ ! -d /var/www/html/public/assets ] && [ ! -f /var/www/html/public/index.html ]; then echo "WARNING: Frontend files not found in public directory"; fi
+
+# Убедимся, что хотя бы один из необходимых файлов существует
+RUN if [ ! -f /var/www/html/public/index.html ] && [ ! -f /var/www/html/public/index.php ]; then echo "ERROR: Neither index.html nor index.php found in public directory"; ls -la /var/www/html/public 2>&1 || echo "Cannot list public directory"; exit 1; fi
 
 # Копируем конфигурацию Nginx и активируем её
 COPY nginx.conf /etc/nginx/sites-available/default
