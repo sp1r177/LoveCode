@@ -65,7 +65,16 @@ COPY --from=frontend-builder /app/frontend/dist /var/www/html/public
 # Настраиваем права и создаём директорию для логов
 RUN chown -R www-data:www-data /var/www/html && \
     mkdir -p /var/www/html/.cursor && \
-    chown -R www-data:www-data /var/www/html/.cursor
+    chown -R www-data:www-data /var/www/html/.cursor && \
+    # Проверяем, что index.php существует
+    if [ ! -f /var/www/html/public/index.php ]; then \
+        echo "ERROR: index.php not found in public directory"; \
+        exit 1; \
+    fi && \
+    # Проверяем, что frontend файлы существуют
+    if [ ! -d /var/www/html/public/assets ] && [ ! -f /var/www/html/public/index.html ]; then \
+        echo "WARNING: Frontend files not found in public directory"; \
+    fi
 
 # Копируем конфигурацию Nginx и активируем её
 COPY nginx.conf /etc/nginx/sites-available/default
