@@ -46,18 +46,18 @@ else
     RUN_EXISTS="false"
     RUN_WRITABLE="false"
 fi
-log_debug "C" "Проверка прав на директории сокетов" "{\"dirs\":[{\"path\":\"/var/run/php\",\"exists\":$VAR_RUN_EXISTS,\"writable\":$VAR_RUN_WRITABLE},{\"path\":\"/run/php\",\"exists\":$RUN_EXISTS,\"writable\":$RUN_WRITABLE}]}"
+log_debug "Проверка прав на директории сокетов" "{\"dirs\":[{\"path\":\"/var/run/php\",\"exists\":$VAR_RUN_EXISTS,\"writable\":$VAR_RUN_WRITABLE},{\"path\":\"/run/php\",\"exists\":$RUN_EXISTS,\"writable\":$RUN_WRITABLE}]}"
 # #endregion
 
 # Запускаем PHP-FPM в фоне
-log_debug "D" "Запуск PHP-FPM" "{\"command\":\"php-fpm -D\"}"
+log_debug "Запуск PHP-FPM" "{\"command\":\"php-fpm -D\"}"
 php-fpm -D
 
 # Ждем появления сокета
 MAX_WAIT=10
 WAIT_COUNT=0
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-    log_debug "D" "Ожидание сокета PHP-FPM (${WAIT_COUNT}s)" "{\"action\":\"waiting_for_socket\",\"elapsed\":${WAIT_COUNT}}"
+    log_debug "Ожидание сокета PHP-FPM (${WAIT_COUNT}s)" "{\"action\":\"waiting_for_socket\",\"elapsed\":${WAIT_COUNT}}"
     sleep 1
     WAIT_COUNT=$((WAIT_COUNT + 1))
     
@@ -65,7 +65,7 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
     for path in "$EXPECTED_PATH" "${ALT_PATHS[@]}"; do
         if [ -S "$path" ]; then
             SOCKET_FOUND="$path"
-            log_debug "D" "Сокет найден" "{\"path\":\"$SOCKET_FOUND\",\"found_at\":\"${WAIT_COUNT}s\"}"
+            log_debug "Сокет найден" "{\"path\":\"$SOCKET_FOUND\",\"found_at\":\"${WAIT_COUNT}s\"}"
             break 2
         fi
     done
@@ -73,10 +73,10 @@ done
 
 # Если сокет не найден в предыдущем цикле, ищем его во всех возможных местах
 if [ -z "$SOCKET_FOUND" ]; then
-    log_debug "A" "Поиск сокета PHP-FPM" "{\"action\":\"searching_socket\"}"
+    log_debug "Поиск сокета PHP-FPM" "{\"action\":\"searching_socket\"}"
     FOUND_SOCKETS=$(find /var/run /run /tmp -name "*fpm*.sock" 2>/dev/null || echo "")
     ESCAPED_SOCKETS=$(echo "$FOUND_SOCKETS" | sed 's/"/\\"/g' | tr '\n' ' ')
-    log_debug "A" "Найденные сокеты" "{\"sockets\":\"$ESCAPED_SOCKETS\"}"
+    log_debug "Найденные сокеты" "{\"sockets\":\"$ESCAPED_SOCKETS\"}"
     
     # Используем первый найденный сокет
     SOCKET_FOUND=$(echo "$FOUND_SOCKETS" | head -1)
@@ -89,15 +89,15 @@ fi
 
 if [ -z "$SOCKET_FOUND" ]; then
     echo "Ошибка: PHP-FPM сокет не найден"
-    log_debug "A" "ОШИБКА: сокет не найден" "{\"expected\":\"$EXPECTED_PATH\",\"checked_paths\":[\"$EXPECTED_PATH\"]}"
+    log_debug "ОШИБКА: сокет не найден" "{\"expected\":\"$EXPECTED_PATH\",\"checked_paths\":[\"$EXPECTED_PATH\"]}"
     exit 1
 else
-    log_debug "A" "Сокет успешно найден, обновляем nginx.conf" "{\"socket_path\":\"$SOCKET_FOUND\"}"
+    log_debug "Сокет успешно найден, обновляем nginx.conf" "{\"socket_path\":\"$SOCKET_FOUND\"}"
     # Обновляем nginx.conf с правильным путём к сокету
     sed -i "s|FASTCGI_SOCKET|$SOCKET_FOUND|g" /etc/nginx/sites-available/default
 fi
 
 # Запускаем Nginx в foreground режиме
-log_debug "D" "Запуск Nginx" "{\"action\":\"starting_nginx\"}"
+log_debug "Запуск Nginx" "{\"action\":\"starting_nginx\"}"
 exec nginx -g 'daemon off;'
 
