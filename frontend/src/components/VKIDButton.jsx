@@ -18,17 +18,8 @@ export default function VKIDButton({ className = '' }) {
       setLoading(true)
       setError(null)
       
-      // Call backend to get VK auth URL
-      const response = await axios.get(`${API_URL}/api/auth/vkid`, {
-        withCredentials: true
-      })
-      
-      if (response.data.auth_url) {
-        // Redirect to VK auth URL
-        window.location.href = response.data.auth_url
-      } else {
-        throw new Error('Failed to get authorization URL')
-      }
+      // Redirect to public VK ID endpoint
+      window.location.href = '/vkid.php'
     } catch (err) {
       console.error('VK ID init error:', err)
       let errorMessage = 'Ошибка авторизации'

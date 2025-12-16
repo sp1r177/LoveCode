@@ -12,7 +12,7 @@
 2. **Configure VK Application Settings**:
    - In the app settings, set the "Authorized redirect URI" to:
      ```
-     https://flirt-ai.ru/api/auth/vk-callback
+     https://flirt-ai.ru/vk-callback.php
      ```
    - Save the changes
 
