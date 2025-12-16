@@ -73,5 +73,10 @@ Nginx обслуживает:
 - Проверьте `FRONTEND_URL` в переменных окружения
 - Убедитесь, что домен совпадает с реальным URL приложения
 
+### Ошибка доступа к VK ID OAuth
+- Проверьте доступность публичных endpoint'ов:
+  - `curl -i https://your-domain.amvera.io/vkid.php`
+  - `curl -i https://your-domain.amvera.io/vk-callback.php`
+
 
 
