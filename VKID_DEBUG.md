@@ -16,7 +16,7 @@ VITE_FRONTEND_URL=https://ваш-домен.ru
 1. Перейдите на https://dev.vk.com/
 2. Откройте ваше приложение
 3. Убедитесь, что:
-   - **Redirect URI** указан как `https://ваш-домен.ru/api/auth/vk-callback`
+   - **Redirect URI** указан как `https://ваш-домен.ru/vk-callback.php`
    - **App ID** совпадает с `VITE_VK_APP_ID`
    - Приложение опубликовано и активно
 
@@ -49,7 +49,7 @@ VITE_FRONTEND_URL=https://ваш-домен.ru
 
 1. Использовать бэкенд redirect URL:
    ```env
-   VITE_VK_REDIRECT_URI=https://flirt-ai.ru/api/auth/vk-callback
+   VITE_VK_REDIRECT_URI=https://flirt-ai.ru/vk-callback.php
    ```
 
 2. Проверить, что App ID правильный (из вашего VK приложения)
