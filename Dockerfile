@@ -18,7 +18,8 @@ COPY frontend/ ./
 
 # Собираем frontend
 # API URL теперь определяется автоматически из window.location
-RUN npm run build
+RUN npm run build || (echo "Frontend build failed" && exit 1)
+RUN if [ ! -d "dist" ]; then echo "ERROR: dist directory not created after build" && ls -la && exit 1; fi
 
 # Финальный образ с PHP и Nginx
 FROM php:8.2-fpm
@@ -60,7 +61,8 @@ COPY backend/ ./backend/
 RUN cp -r backend/. /var/www/html/ && rm -rf backend/
 
 # Копируем собранный frontend из builder stage
-COPY --from=frontend-builder /app/frontend/dist /var/www/html/public
+COPY --from=frontend-builder /app/frontend/dist /var/www/html/public/
+RUN if [ ! -d "/var/www/html/public" ]; then echo "ERROR: Public directory not created" && exit 1; fi
 
 # Настраиваем права и создаём директорию для логов
 RUN chown -R www-data:www-data /var/www/html && \
@@ -74,6 +76,13 @@ RUN chown -R www-data:www-data /var/www/html && \
     # Проверяем, что frontend файлы существуют
     if [ ! -d /var/www/html/public/assets ] && [ ! -f /var/www/html/public/index.html ]; then \
         echo "WARNING: Frontend files not found in public directory"; \
+    fi
+    
+    # Убедимся, что хотя бы один из необходимых файлов существует
+    if [ ! -f /var/www/html/public/index.html ] && [ ! -f /var/www/html/public/index.php ]; then \
+        echo "ERROR: Neither index.html nor index.php found in public directory"; \
+        ls -la /var/www/html/public 2>&1 || echo "Cannot list public directory"; \
+        exit 1; \
     fi
 
 # Копируем конфигурацию Nginx и активируем её

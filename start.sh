@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Handle shutdown signals gracefully
+trap 'echo "Received SIGTERM, shutting down gracefully"; exit 0' TERM
+trap 'echo "Received SIGINT, shutting down gracefully"; exit 0' INT
+
 LOG_FILE="/var/www/html/.cursor/debug.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 chmod 777 "$(dirname "$LOG_FILE")" 2>/dev/null || true
@@ -83,9 +87,27 @@ log_debug "Проверка прав на директории сокетов" "
 # Запускаем PHP-FPM в фоне
 log_debug "Запуск PHP-FPM" "{\"command\":\"php-fpm -D\"}"
 # Пробуем разные версии php-fpm
-PHP_FPM_OUTPUT=$(php-fpm -D 2>&1 || php-fpm8.2 -D 2>&1 || echo "error")
-if [ "$PHP_FPM_OUTPUT" != "" ] && [ "$PHP_FPM_OUTPUT" != "error" ]; then
-    log_debug "Вывод PHP-FPM при запуске" "{\"output\":\"$PHP_FPM_OUTPUT\"}"
+PHP_FPM_STARTED=false
+if command -v php-fpm8.2 >/dev/null 2>&1; then
+    php-fpm8.2 -D 2>&1
+    if [ $? -eq 0 ]; then
+        PHP_FPM_STARTED=true
+        log_debug "PHP-FPM 8.2 запущен" "{\"status\":\"success\"}"
+    fi
+elif command -v php-fpm >/dev/null 2>&1; then
+    php-fpm -D 2>&1
+    if [ $? -eq 0 ]; then
+        PHP_FPM_STARTED=true
+        log_debug "PHP-FPM запущен" "{\"status\":\"success\"}"
+    fi
+else
+    log_debug "ОШИБКА: PHP-FPM не найден" "{\"error\":\"php-fpm command not found\"}"
+    exit 1
+fi
+
+if [ "$PHP_FPM_STARTED" = "false" ]; then
+    log_debug "ОШИБКА: Не удалось запустить PHP-FPM" "{\"status\":\"failed\"}"
+    exit 1
 fi
 
 # Дополнительная проверка, что PHP-FPM запущен
@@ -185,17 +207,39 @@ fi
 
 # Небольшая задержка перед запуском nginx для уверенности
 sleep 1
-# Запускаем nginx с таймаутом
-TIMEOUT=30
-(
-    sleep $TIMEOUT
-    echo "Application startup timeout reached after $TIMEOUT seconds"
-    log_debug "Таймаут запуска приложения" "{\"timeout\":$TIMEOUT}"
-) &
-TIMEOUT_PID=$!
 
-exec nginx -g 'daemon off;'
+# Проверяем, что все сервисы готовы
+MAX_READY_WAIT=30
+READY_WAIT=0
+while [ $READY_WAIT -lt $MAX_READY_WAIT ]; do
+    # Проверяем, что PHP-FPM слушает на сокете
+    if [ -S "$SOCKET_FOUND" ]; then
+        log_debug "Сервисы готовы" "{\"php_fpm_socket\":\"$SOCKET_FOUND\",\"wait_time\":$READY_WAIT}"
+        break
+    fi
+    
+    sleep 1
+    READY_WAIT=$((READY_WAIT + 1))
+    
+    if [ $READY_WAIT -eq $MAX_READY_WAIT ]; then
+        log_debug "ОШИБКА: Сервисы не готовы в течение времени ожидания" "{\"max_wait\":$MAX_READY_WAIT}"
+        exit 1
+    fi
+done
 
-# Kill the timeout process if nginx starts successfully
-kill $TIMEOUT_PID 2>/dev/null || true
+# Создаем простой health check файл если его нет
+if [ ! -f /var/www/html/public/health ]; then
+    echo "OK" > /var/www/html/public/health
+    chmod 644 /var/www/html/public/health
+    log_debug "Создан health check файл" "{\"path\":\"/var/www/html/public/health\"}"
+fi
+
+# Проверяем, что nginx может запуститься
+if ! command -v nginx >/dev/null 2>&1; then
+    log_debug "ОШИБКА: nginx не найден" "{\"error\":\"nginx command not found\"}"
+    exit 1
+fi
+
+# Запускаем nginx в foreground режиме
+nginx -g 'daemon off;'
 
