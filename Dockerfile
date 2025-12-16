@@ -60,7 +60,7 @@ COPY backend/ ./backend/
 RUN cp -r backend/. /var/www/html/ && rm -rf backend/
 
 # Копируем собранный frontend из builder stage
-COPY --from=frontend-builder /app/frontend/dist /var/www/html/frontend/dist
+COPY --from=frontend-builder /app/frontend/dist /var/www/html/public
 
 # Настраиваем права и создаём директорию для логов
 RUN chown -R www-data:www-data /var/www/html && \
