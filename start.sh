@@ -1,48 +1,41 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "[boot] starting php-fpm..."
-
-# Попробовать разные команды (в разных образах имя отличается)
+# Start PHP-FPM
 if command -v php-fpm8.2 >/dev/null 2>&1; then
-  php-fpm8.2 -D
+    php-fpm8.2 -D
 elif command -v php-fpm >/dev/null 2>&1; then
-  php-fpm -D
+    php-fpm -D
 else
-  echo "[boot][fatal] php-fpm binary not found"
-  exit 1
+    echo "ERROR: php-fpm not found"
+    exit 1
 fi
 
-echo "[boot] searching php-fpm socket..."
-SOCKET=""
-
-for i in 1 2 3 4 5 6 7 8 9 10; do
-  for s in /run/php/*.sock /var/run/php/*.sock; do
-    if [ -S "$s" ]; then
-      SOCKET="$s"
-      break
-    fi
-  done
-  [ -n "$SOCKET" ] && break
-  sleep 0.5
+# Wait for PHP-FPM socket to be created
+SOCKET_FOUND=""
+for i in {1..30}; do
+    for sock in /var/run/php/*.sock /run/php/*.sock; do
+        if [ -S "$sock" ]; then
+            SOCKET_FOUND="$sock"
+            break 2
+        fi
+    done
+    sleep 1
 done
 
-if [ -z "$SOCKET" ]; then
-  echo "[boot][fatal] php-fpm socket not found"
-  echo "[boot] ls -la /run/php:"
-  ls -la /run/php 2>/dev/null || true
-  echo "[boot] ls -la /var/run/php:"
-  ls -la /var/run/php 2>/dev/null || true
-  exit 1
+if [ -z "$SOCKET_FOUND" ]; then
+    echo "ERROR: PHP-FPM socket not found"
+    ls -la /var/run/php/ /run/php/ 2>/dev/null || echo "Socket directories not found"
+    exit 1
 fi
 
-echo "[boot] using php-fpm socket: $SOCKET"
+echo "Using PHP-FPM socket: $SOCKET_FOUND"
 
-# nginx.conf должен содержать unix:FASTCGI_SOCKET
-sed -i "s|FASTCGI_SOCKET|$SOCKET|g" /etc/nginx/sites-available/default
+# Replace placeholder in nginx config
+sed -i "s|unix:FASTCGI_SOCKET|unix:$SOCKET_FOUND|g" /etc/nginx/sites-available/default
 
-echo "[boot] nginx config fastcgi_pass:"
-grep -n "fastcgi_pass" /etc/nginx/sites-available/default || true
+# Test nginx configuration
+grep -n "fastcgi_pass" /etc/nginx/sites-available/default || echo "No fastcgi_pass found"
 
-echo "[boot] starting nginx..."
+# Start nginx in foreground
 exec nginx -g "daemon off;"
