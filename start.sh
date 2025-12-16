@@ -89,16 +89,24 @@ log_debug "Запуск PHP-FPM" "{\"command\":\"php-fpm -D\"}"
 # Пробуем разные версии php-fpm
 PHP_FPM_STARTED=false
 if command -v php-fpm8.2 >/dev/null 2>&1; then
-    php-fpm8.2 -D 2>&1
-    if [ $? -eq 0 ]; then
+    PHP_FPM_OUTPUT=$(php-fpm8.2 -D 2>&1)
+    PHP_FPM_EXIT_CODE=$?
+    log_debug "Запуск PHP-FPM 8.2" "{\"exit_code\":$PHP_FPM_EXIT_CODE,\"output\":\"$PHP_FPM_OUTPUT\"}"
+    if [ $PHP_FPM_EXIT_CODE -eq 0 ]; then
         PHP_FPM_STARTED=true
         log_debug "PHP-FPM 8.2 запущен" "{\"status\":\"success\"}"
+    else
+        log_debug "ОШИБКА: Не удалось запустить PHP-FPM 8.2" "{\"exit_code\":$PHP_FPM_EXIT_CODE,\"output\":\"$PHP_FPM_OUTPUT\"}"
     fi
 elif command -v php-fpm >/dev/null 2>&1; then
-    php-fpm -D 2>&1
-    if [ $? -eq 0 ]; then
+    PHP_FPM_OUTPUT=$(php-fpm -D 2>&1)
+    PHP_FPM_EXIT_CODE=$?
+    log_debug "Запуск PHP-FPM" "{\"exit_code\":$PHP_FPM_EXIT_CODE,\"output\":\"$PHP_FPM_OUTPUT\"}"
+    if [ $PHP_FPM_EXIT_CODE -eq 0 ]; then
         PHP_FPM_STARTED=true
         log_debug "PHP-FPM запущен" "{\"status\":\"success\"}"
+    else
+        log_debug "ОШИБКА: Не удалось запустить PHP-FPM" "{\"exit_code\":$PHP_FPM_EXIT_CODE,\"output\":\"$PHP_FPM_OUTPUT\"}"
     fi
 else
     log_debug "ОШИБКА: PHP-FPM не найден" "{\"error\":\"php-fpm command not found\"}"
