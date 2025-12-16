@@ -49,6 +49,12 @@ CUSTOM_POOL_CONFIG="/usr/local/etc/php-fpm.d/zzz-custom.conf"
 if [ -f "$CUSTOM_POOL_CONFIG" ]; then
     CUSTOM_LISTEN=$(grep "^listen" "$CUSTOM_POOL_CONFIG" | head -1 || echo "not_found")
     log_debug "Кастомная конфигурация PHP-FPM" "{\"config_file\":\"$CUSTOM_POOL_CONFIG\",\"listen_line\":\"$CUSTOM_LISTEN\"}"
+    
+    # Проверяем, что конфигурация загружается правильно
+    PHP_FPM_CONFIG_TEST=$(php-fpm8.2 -t 2>&1 || php-fpm -t 2>&1 || echo "config_test_failed")
+    log_debug "Проверка конфигурации PHP-FPM" "{\"test_result\":\"$PHP_FPM_CONFIG_TEST\"}"
+else
+    log_debug "Кастомная конфигурация PHP-FPM не найдена" "{\"config_file\":\"$CUSTOM_POOL_CONFIG\"}"
 fi
 if [ -f "$POOL_CONFIG" ]; then
     LISTEN_LINE=$(grep "^listen" "$POOL_CONFIG" | head -1 || echo "not_found")
@@ -61,7 +67,15 @@ fi
 
 # Создаём директорию для сокета PHP-FPM, если её нет
 mkdir -p /var/run/php
+chown www-data:www-data /var/run/php || log_debug "Не удалось изменить владельца /var/run/php" "{\"error\":\"chown failed\"}"
 mkdir -p /run/php
+chown www-data:www-data /run/php || log_debug "Не удалось изменить владельца /run/php" "{\"error\":\"chown failed\"}"
+
+# Удаляем старый сокет если он существует
+if [ -S "$EXPECTED_PATH" ]; then
+    log_debug "Удаление старого сокета" "{\"path\":\"$EXPECTED_PATH\"}"
+    rm -f "$EXPECTED_PATH"
+fi
 
 EXPECTED_PATH="/var/run/php/php8.2-fpm.sock"
 ALT_PATHS=("/run/php/php8.2-fpm.sock" "/var/run/php-fpm.sock" "/run/php-fpm.sock" "/tmp/php-fpm.sock")
@@ -133,6 +147,10 @@ MAX_WAIT=15
 WAIT_COUNT=0
 SOCKET_FOUND=""
 
+# Проверяем конфигурацию PHP-FPM перед ожиданием сокета
+PHP_FPM_POOL_STATUS=$(cat /usr/local/etc/php-fpm.d/zzz-custom.conf 2>&1 || echo "config_not_readable")
+log_debug "Конфигурация PHP-FPM pool перед ожиданием" "{\"config_content\":\"$PHP_FPM_POOL_STATUS\"}"
+
 while [ $WAIT_COUNT -lt $MAX_WAIT ] && [ -z "$SOCKET_FOUND" ]; do
     log_debug "Ожидание сокета PHP-FPM (${WAIT_COUNT}s)" "{\"action\":\"waiting_for_socket\",\"elapsed\":${WAIT_COUNT}}"
     sleep 1
@@ -177,8 +195,17 @@ else
     # Проверяем, что сокет файл действительно существует
     if [ ! -S "$SOCKET_FOUND" ]; then
         log_debug "ОШИБКА: Сокет файл не существует" "{\"socket_path\":\"$SOCKET_FOUND\",\"file_exists\":false}"
+        
+        # Проверяем детали файла
+        SOCKET_DETAILS=$(ls -la "$SOCKET_FOUND" 2>&1 || echo "file_not_found")
+        log_debug "Детали сокет файла" "{\"details\":\"$SOCKET_DETAILS\"}"
+        
         exit 1
     fi
+    
+    # Проверяем права доступа к сокету
+    SOCKET_PERMS=$(stat -c "%a %U:%G" "$SOCKET_FOUND" 2>&1 || echo "perm_check_failed")
+    log_debug "Права доступа к сокету" "{\"permissions\":\"$SOCKET_PERMS\"}"
     
     # Проверяем, что nginx.conf существует
     if [ ! -f /etc/nginx/sites-available/default ]; then
@@ -186,12 +213,21 @@ else
         exit 1
     fi
     
+    # Проверяем, что nginx может читать сокет
+    if [ -n "$SOCKET_FOUND" ]; then
+        # Добавляем пользователя nginx в группу www-data если это возможно
+        if getent group www-data > /dev/null 2>&1; then
+            usermod -a -G www-data nginx 2>/dev/null || log_debug "Не удалось добавить nginx в группу www-data" "{\"error\":\"usermod failed\"}"
+        fi
+    fi
+    
     # Логируем содержимое nginx.conf для отладки
     NGINX_CONF_CONTENT=$(head -20 /etc/nginx/sites-available/default 2>&1 || echo "error_reading_conf")
     log_debug "Содержимое nginx.conf (первые 20 строк)" "{\"content\":\"$NGINX_CONF_CONTENT\"}"
     
     # Обновляем nginx.conf с правильным путём к сокету
-    sed -i "s|FASTCGI_SOCKET|$SOCKET_FOUND|g" /etc/nginx/sites-available/default
+    # Используем более точную замену чтобы избежать конфликтов
+    sed -i "s|unix:FASTCGI_SOCKET|unix:$SOCKET_FOUND|g" /etc/nginx/sites-available/default
     # Verify the replacement worked
     REPLACEMENT_CHECK=$(grep "fastcgi_pass unix:$SOCKET_FOUND" /etc/nginx/sites-available/default | wc -l)
     log_debug "Проверка замены сокета" "{\"matches_found\":$REPLACEMENT_CHECK,\"socket_path\":\"$SOCKET_FOUND\"}"
@@ -210,6 +246,11 @@ log_debug "Проверка конфигурации Nginx" "{\"result\":\"$NGIN
 # Если есть ошибки конфигурации, выходим
 if [[ "$NGINX_TEST" == *"config_error"* ]] || [[ "$NGINX_TEST" == *"emerg"* ]]; then
     log_debug "ОШИБКА: Неверная конфигурация Nginx" "{\"error\":\"$NGINX_TEST\"}"
+    
+    # Выводим содержимое конфигурации для отладки
+    NGINX_FULL_CONFIG=$(cat /etc/nginx/sites-available/default 2>&1 || echo "error_reading_full_config")
+    log_debug "Полная конфигурация Nginx" "{\"config\":\"$NGINX_FULL_CONFIG\"}"
+    
     exit 1
 fi
 
@@ -223,7 +264,19 @@ while [ $READY_WAIT -lt $MAX_READY_WAIT ]; do
     # Проверяем, что PHP-FPM слушает на сокете
     if [ -S "$SOCKET_FOUND" ]; then
         log_debug "Сервисы готовы" "{\"php_fpm_socket\":\"$SOCKET_FOUND\",\"wait_time\":$READY_WAIT}"
+        
+        # Проверяем, что сокет действительно принимает соединения
+        SOCKET_STATUS=$(ls -la "$SOCKET_FOUND" 2>&1 || echo "socket_check_failed")
+        log_debug "Статус сокета" "{\"details\":\"$SOCKET_STATUS\"}"
+        
         break
+    fi
+    
+    # Проверяем, что PHP-FPM процесс все еще работает
+    PHP_FPM_PROC=$(ps aux | grep php-fpm | grep -v grep || echo "not_running")
+    if [ "$PHP_FPM_PROC" = "not_running" ]; then
+        log_debug "ОШИБКА: PHP-FPM процесс завершен" "{\"status\":\"terminated\"}"
+        exit 1
     fi
     
     sleep 1
@@ -231,6 +284,11 @@ while [ $READY_WAIT -lt $MAX_READY_WAIT ]; do
     
     if [ $READY_WAIT -eq $MAX_READY_WAIT ]; then
         log_debug "ОШИБКА: Сервисы не готовы в течение времени ожидания" "{\"max_wait\":$MAX_READY_WAIT}"
+        
+        # Выводим дополнительную информацию для отладки
+        PHP_FPM_PS=$(ps aux | grep php-fpm | grep -v grep || echo "no_php_fpm_processes")
+        log_debug "PHP-FPM процессы" "{\"processes\":\"$PHP_FPM_PS\"}"
+        
         exit 1
     fi
 done
