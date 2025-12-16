@@ -24,7 +24,7 @@
 ### VK OAuth
 - `VK_APP_ID` - ID приложения VK
 - `VK_APP_SECRET` - секретный ключ приложения VK
-- `VK_REDIRECT_URI` - URI для редиректа (например: `https://your-domain.amvera.io/api/auth/vk-callback`)
+- `VK_REDIRECT_URI` - URI для редиректа (например: `https://your-domain.amvera.io/vk-callback.php`)
 
 ### JWT
 - `JWT_SECRET` - секретный ключ для JWT (минимум 32 символа)

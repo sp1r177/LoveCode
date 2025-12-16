@@ -7,7 +7,7 @@
 Убедитесь, что в `frontend/.env` указаны:
 ```env
 VITE_VK_APP_ID=ваш_реальный_app_id
-VITE_VK_REDIRECT_URI=https://ваш-домен.ru/api/auth/vk-callback
+VITE_VK_REDIRECT_URI=https://ваш-домен.ru/vk-callback.php
 VITE_FRONTEND_URL=https://ваш-домен.ru
 ```
 

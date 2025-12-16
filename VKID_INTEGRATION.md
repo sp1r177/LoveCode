@@ -22,14 +22,14 @@
    ```
    VK_APP_ID=your_vk_app_id
    VK_APP_SECRET=your_vk_app_secret
-   VK_REDIRECT_URI=https://flirt-ai.ru/api/auth/vk-callback
+   VK_REDIRECT_URI=https://flirt-ai.ru/vk-callback.php
    FRONTEND_URL=https://flirt-ai.ru
    ```
 
    Frontend (.env file):
    ```
    VITE_VK_APP_ID=your_vk_app_id
-   VITE_VK_REDIRECT_URI=https://flirt-ai.ru/api/auth/vk-callback
+   VITE_VK_REDIRECT_URI=https://flirt-ai.ru/vk-callback.php
    ```
 
 4. **Deploy Changes**:

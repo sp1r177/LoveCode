@@ -286,7 +286,7 @@ DB_PASSWORD=YOUR_STRONG_PASSWORD
 # VK OAuth
 VK_APP_ID=your_vk_app_id
 VK_APP_SECRET=your_vk_app_secret
-VK_REDIRECT_URI=https://YOUR_DOMAIN.com/api/auth/vk-callback
+VK_REDIRECT_URI=https://YOUR_DOMAIN.com/vk-callback.php
 
 # JWT
 JWT_SECRET=GENERATE_RANDOM_32_CHARS_MINIMUM_SECRET_KEY_HERE
@@ -412,8 +412,8 @@ cat ~/.ssh/github_actions  # Скопируйте приватный ключ
    - Название: AI Ассистент
 3. Получите **App ID** и **App Secret**
 4. В настройках приложения добавьте:
-   - **Redirect URI**: `https://YOUR_DOMAIN.com/api/auth/vk-callback`
-   - **Доверенный redirect URI**: `https://YOUR_DOMAIN.com/api/auth/vk-callback`
+   - **Redirect URI**: `https://YOUR_DOMAIN.com/vk-callback.php`
+   - **Доверенный redirect URI**: `https://YOUR_DOMAIN.com/vk-callback.php`
 
 ### 11.2 Обновление .env
 

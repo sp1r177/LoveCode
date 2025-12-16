@@ -159,6 +159,13 @@ curl -i https://flirt-ai.ru/api/auth/vkid
 
 # Проверка OPTIONS preflight запроса
 curl -i -X OPTIONS https://flirt-ai.ru/api/auth/vkid -H "Origin: https://flirt-ai.ru" -H "Access-Control-Request-Method: GET"
+
+# Проверка новых публичных endpoint'ов
+# Проверка GET /vkid.php
+curl -i https://flirt-ai.ru/vkid.php
+
+# Проверка GET /vk-callback.php (без параметров)
+curl -i https://flirt-ai.ru/vk-callback.php
 ```
 
 ### Как проверить исправление ошибок
@@ -194,7 +201,7 @@ DB_PASSWORD=your_password
 # VK OAuth
 VK_APP_ID=your_vk_app_id
 VK_APP_SECRET=your_vk_app_secret
-VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
+VK_REDIRECT_URI=https://your-domain.com/vk-callback.php
 
 # CORS
 CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com
@@ -222,7 +229,7 @@ FRONTEND_URL=https://your-domain.com
 ```env
 VITE_API_BASE_URL=https://your-domain.com
 VITE_VK_APP_ID=your_vk_app_id
-VITE_VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
+VITE_VK_REDIRECT_URI=https://your-domain.com/vk-callback.php
 ```
 
 ## 🔐 Настройка VK OAuth
@@ -230,7 +237,7 @@ VITE_VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
 1. Перейдите на [VK Developers](https://dev.vk.com/)
 2. Создайте новое приложение (тип: "Веб-сайт")
 3. Получите `App ID` и `App Secret`
-4. Укажите Redirect URI: `https://your-domain.com/api/auth/vk-callback`
+4. Укажите Redirect URI: `https://your-domain.com/vk-callback.php`
 5. Добавьте в `.env` backend
 
 ## 💳 Настройка оплаты (ЮMoney P2P)
@@ -325,7 +332,7 @@ VITE_VK_REDIRECT_URI=https://your-domain.com/api/auth/vk-callback
 ### Авторизация
 - `GET /api/auth/vkid` — Получить URL для авторизации VK
 - `POST /api/auth/vkid` — Обработать токен VK ID
-- `GET /api/auth/vk-callback` — Callback от VK (редирект)
+- `GET /api/auth/vk-callback` — Callback от VK (редирект) (устарел, используйте `/vk-callback.php`)
 
 ### Анализ (требует авторизации)
 - `POST /api/analyze-dialog` — Проанализировать переписку

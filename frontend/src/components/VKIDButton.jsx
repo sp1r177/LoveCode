@@ -113,7 +113,7 @@ export default function VKIDButton({ className = '' }) {
     try {
       // Используем точные значения из примера
       const appId = import.meta.env.VITE_VK_APP_ID || '54395556'
-      const redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI || 'https://flirt-ai.ru/api/auth/vk-callback'
+      const redirectUrl = import.meta.env.VITE_VK_REDIRECT_URI || 'https://flirt-ai.ru/vk-callback.php'
 
       console.log('Initializing VK ID OneTap with:', { appId, redirectUrl })
 
